@@ -68,6 +68,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 	protected TouchMouse touchMouse = new TouchMouse();
 	protected TouchPointer touchPointer = new TouchPointer();
 	protected TouchLightgun touchLightgun = new TouchLightgun();
+	protected TouchTaiko touchTaiko = new TouchTaiko();
 	protected GameController gameController = new GameController();
 
 	protected Mouse mouse = new Mouse();
@@ -81,6 +82,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 	public TouchMouse getTouchMouse() {return touchMouse;}
 	public TouchPointer getTouchPointer() {return touchPointer;}
 	public TouchLightgun getTouchLightgun() {return touchLightgun;}
+	public TouchTaiko getTouchTaiko() {return touchTaiko;}
 	public Mouse getMouse() {return mouse;}
 	public Keyboard getKeyboard() {return keyboard;}
 	public GameController getGameController() {return gameController;}
@@ -101,6 +103,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 		touchMouse.setMAME4droid(mm);
 		touchPointer.setMAME4droid(mm);
 		touchLightgun.setMAME4droid(mm);
+		touchTaiko.setMAME4droid(mm);
 		mouse.setMAME4droid(mm);
 		keyboard.setMAME4droid(mm);
 		gameController.setMAME4droid(mm);
@@ -141,6 +144,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 		Emulator.setTouchData(0, Emulator.FINGER_UP, -1, -1);
 
 		touchStick.reset();
+		touchTaiko.reset();
 	}
 
 	public void fixTiltCoin() {
@@ -206,6 +210,12 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 			if (ControlCustomizer.isEnabled()) {
 				controlCustomizer.handleMotion(event);
 				return true;
+			}
+
+			// Taiko drum claims its pointers first so they are not also seen by
+			// the stick / button hit testing below.
+			if (mm.getPrefsHelper().isTatacon()) {
+				touchTaiko.handleMotion(event, digital_data);
 			}
 
 			if (touchController.isHandledStick() &&

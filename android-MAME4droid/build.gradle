@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-		classpath 'com.android.tools.build:gradle:8.7.3'
+		classpath 'com.android.tools.build:gradle:9.4.1'
     }
 }
 
@@ -13,6 +13,13 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+
+    // Android Studio's Gradle sync requests the 'prepareKotlinBuildScriptModel' task, which is
+    // normally provided by the Kotlin Gradle Plugin. This is a Java-only project and AGP 9's
+    // built-in Kotlin no longer registers that task, so define a no-op to let IDE sync succeed.
+    if (tasks.findByName("prepareKotlinBuildScriptModel") == null) {
+        tasks.register("prepareKotlinBuildScriptModel")
     }
 
 /*    gradle.projectsEvaluated {

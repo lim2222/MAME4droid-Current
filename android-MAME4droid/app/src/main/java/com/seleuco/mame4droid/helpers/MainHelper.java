@@ -680,13 +680,6 @@ public class MainHelper {
                             .readControllerValues(R.raw.controller_portrait);
                 }
             }
-
-            if (ControlCustomizer.isEnabled() && !Emulator.isPortraitFull()) {
-                ControlCustomizer.setEnabled(false);
-                mm.getDialogHelper()
-                        .setInfoMsg(mm.getString(R.string.layout_custom_fullscreen_only));
-                mm.showDialog(DialogHelper.DIALOG_INFO);
-            }
         } else {
             ((IEmuView) emuView).setScaleType(mm.getPrefsHelper()
                     .getLandscapeScaleMode());

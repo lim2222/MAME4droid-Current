@@ -1,4 +1,5 @@
 1,0,0,0,480,360         //main rect
+9,0,10,120,220,220      //taiko drum (tatacon) - drawn behind the buttons
 2,1,0,99,95,85 		    //upleft
 2,2,95,87,70,96  	    //up
 2,3,166,99,85,85	    //upright

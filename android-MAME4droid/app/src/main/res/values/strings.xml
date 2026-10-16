@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App -->
-    <string name="app_name" translatable="false">MAME4droid (Current)</string>
+    <string name="app_name" translatable="false">MAME4droid Taiko</string>
     <string name="mame_version" translatable="false">0.289</string>
     <string name="label_settings">MAME4droid Settings</string>
     <string name="label_help">MAME4droid Help</string>
@@ -220,7 +220,7 @@
     <string name="welcome_quest">Welcome to MAME4droid for META Quest!\n\nYou should pair an XBOX One controller on your META Quest to be able to play games but you can play lightgun games with your touch controllers.\n\n</string>
     <string name="layout_custom_fullscreen_only">Control layout customization is only allowed in fullscreen mode</string>
     <string name="layout_custom_controller_visible">Control layout customization is only allowed when touch controller is visible</string>
-    <string name="tv_help">When MAME4droid is first run, it will create a folder structure for you on the internal memory of your Android device. This folder contains all the other folders MAME uses as well as some basic configuration files.Since MAME4droid does not come with game ROM files, you will need to copy them to (You can change it in options to external storage if your device allows it) \'/storage/emulated/0/Android/media/com.seleuco.mame4d2024/roms\' folder (the one that applies) yourself. These should be properly named, ZIPped MAME v0.272 ROMs files with the filenames in all lower case.\n\nImportant: You should define or map your Android TV game controller on \'options/settings/input/External controller/define Keys\' to avoid this help screen constantly showing if the controller is not auto detected.\n\nControls: Buttons A,B,C,D,E,F on the controller map to buttons Button MAME 1 to 6 buttons. Coin button inserts coin/adds credit.START button starts 1P game. A+START is fast forward. B+START is toggle UI controls. START+A+B is service mode. SELECT+A+B is soft reset. Use SELECT(coin) or START for UI navigation.R1 + START loads a save state. L1 + START saves a save state. START + SELECT when gaming accesses the game\'s MAME menu (dip switches, etc)...</string>
+    <string name="tv_help">When MAME4droid is first run, it will create a folder structure for you on the internal memory of your Android device. This folder contains all the other folders MAME uses as well as some basic configuration files.Since MAME4droid does not come with game ROM files, you will need to copy them to (You can change it in options to external storage if your device allows it) \'/storage/emulated/0/Android/media/com.seleuco.mame4dtaiko/roms\' folder (the one that applies) yourself. These should be properly named, ZIPped MAME v0.272 ROMs files with the filenames in all lower case.\n\nImportant: You should define or map your Android TV game controller on \'options/settings/input/External controller/define Keys\' to avoid this help screen constantly showing if the controller is not auto detected.\n\nControls: Buttons A,B,C,D,E,F on the controller map to buttons Button MAME 1 to 6 buttons. Coin button inserts coin/adds credit.START button starts 1P game. A+START is fast forward. B+START is toggle UI controls. START+A+B is service mode. SELECT+A+B is soft reset. Use SELECT(coin) or START for UI navigation.R1 + START loads a save state. L1 + START saves a save state. START + SELECT when gaming accesses the game\'s MAME menu (dip switches, etc)...</string>
 
     <!-- Emulator -->
     <string name="error_opening_file">Error opening file...</string>
@@ -345,6 +345,8 @@
     <string name="pref_always_gh_summary">Enable it to always show G,H buttons when full screen so you can bind them MAME actions</string>
     <string name="pref_animated_title">Animated</string>
     <string name="pref_animated_summary">Animated touch control. Disable for performance boost</string>
+    <string name="pref_tatacon_title">Taiko drum (tatacon)</string>
+    <string name="pref_tatacon_summary">Show an on-screen Taiko no Tatsujin drum instead of the stick. Centre = don, everything else = ka, each split into left/right. In Customize layout use MOVE to drag it and RESIZE to change its size (drag sideways for width, up/down for height)</string>
     <string name="pref_vibrate_title">Vibrate</string>
     <string name="pref_vibrate_summary">Master switch: haptic feedback for touch controls, analog stick, lightgun and mouse</string>
     <string name="pref_analog_vibrate_title">Analog stick vibration</string>

@@ -207,7 +207,7 @@
     <string name="welcome_quest">欢迎使用 META Quest 版 MAME4droid！\n\n您应在 META Quest 上配对一个 XBOX One 手柄才能玩游戏，但您可以用触摸手柄玩光枪游戏。\n\n</string>
     <string name="layout_custom_fullscreen_only">控制布局自定义仅在全屏模式下可用</string>
     <string name="layout_custom_controller_visible">控制布局自定义仅在触摸手柄可见时可用</string>
-    <string name="tv_help">首次运行 MAME4droid 时，它会在您 Android 设备的内部存储中创建文件夹结构。该文件夹包含 MAME 使用的所有其他文件夹以及一些基本配置文件。由于 MAME4droid 不附带游戏 ROM 文件，您需要将它们复制到 \'/storage/emulated/0/Android/media/com.seleuco.mame4d2024/roms\' 文件夹（如适用，您可在选项中改为外部存储，如果设备允许）。这些应是正确命名、压缩为 ZIP 的 MAME v0.272 ROM 文件，文件名全部小写。\n\n重要：您应在 \'选项/设置/输入/外部手柄/定义按键\' 中定义或映射您的 Android TV 手柄，以避免手柄未自动检测到时此帮助界面不断出现。\n\n控制：手柄上的 A、B、C、D、E、F 按键对应 MAME 的按键 1 到 6。Coin 键投币/加币。START 键开始 1P 游戏。A+START 是快进。B+START 切换界面控制。START+A+B 是维修模式。SELECT+A+B 是软复位。使用 SELECT(coin) 或 START 进行界面导航。R1 + START 读取存档。L1 + START 保存存档。游戏中 START + SELECT 进入游戏的 MAME 菜单（DIP 开关等）……</string>
+    <string name="tv_help">首次运行 MAME4droid 时，它会在您 Android 设备的内部存储中创建文件夹结构。该文件夹包含 MAME 使用的所有其他文件夹以及一些基本配置文件。由于 MAME4droid 不附带游戏 ROM 文件，您需要将它们复制到 \'/storage/emulated/0/Android/media/com.seleuco.mame4dtaiko/roms\' 文件夹（如适用，您可在选项中改为外部存储，如果设备允许）。这些应是正确命名、压缩为 ZIP 的 MAME v0.272 ROM 文件，文件名全部小写。\n\n重要：您应在 \'选项/设置/输入/外部手柄/定义按键\' 中定义或映射您的 Android TV 手柄，以避免手柄未自动检测到时此帮助界面不断出现。\n\n控制：手柄上的 A、B、C、D、E、F 按键对应 MAME 的按键 1 到 6。Coin 键投币/加币。START 键开始 1P 游戏。A+START 是快进。B+START 切换界面控制。START+A+B 是维修模式。SELECT+A+B 是软复位。使用 SELECT(coin) 或 START 进行界面导航。R1 + START 读取存档。L1 + START 保存存档。游戏中 START + SELECT 进入游戏的 MAME 菜单（DIP 开关等）……</string>
 
     <string name="error_opening_file">打开文件出错……</string>
     <string name="launching_rom">正在启动：%1$s\nMAME4droid (Current) %2$s 作者 D.Valdeita (Seleuco)</string>
@@ -324,6 +324,8 @@
     <string name="pref_always_gh_summary">启用以在全屏时始终显示 G、H 按钮，以便为它们绑定 MAME 动作</string>
     <string name="pref_animated_title">动画</string>
     <string name="pref_animated_summary">动画触摸控制。禁用以提升性能</string>
+    <string name="pref_tatacon_title">太鼓鼓面（tatacon）</string>
+    <string name="pref_tatacon_summary">显示太鼓达人触摸鼓面代替摇杆。中心=咚（don），其余全部=咔（ka），左右各分一半。在“自定义布局”里用 MOVE 拖动位置，用 RESIZE 调整大小（横向拖动改宽度，纵向拖动改高度）</string>
     <string name="pref_vibrate_title">震动</string>
     <string name="pref_vibrate_summary">总开关：触摸控制、模拟摇杆、光枪和鼠标的震动反馈</string>
     <string name="pref_analog_vibrate_title">模拟摇杆震动</string>

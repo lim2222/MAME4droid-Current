@@ -353,6 +353,9 @@ public class InputView extends ImageView {
 				} else if (v.getType() == TouchController.TYPE_ANALOG_RECT) {
 					// If it's an analog stick, delegate drawing to its own class.
 					mm.getInputHandler().getTouchStick().draw(canvas);
+				} else if (v.getType() == TouchController.TYPE_TATACON_RECT) {
+					// Taiko drum: delegate drawing to its own class.
+					mm.getInputHandler().getTouchTaiko().draw(canvas);
 				} else if (v.getType() == TouchController.TYPE_BUTTON_IMG) {
 					// Select the correct button image (pressed or unpressed).
 					d = btns_images[v.getValue()][mm.getInputHandler().getTouchController().getBtnStates()[v.getValue()]];
@@ -384,6 +387,7 @@ public class InputView extends ImageView {
 					if (v.getType() == TouchController.TYPE_BUTTON_RECT) canvas.drawRect(r, p2);
 					else if (mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_STICK_RECT) canvas.drawRect(r, p2);
 					else if (mm.getPrefsHelper().getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_ANALOG_RECT) canvas.drawRect(r, p2);
+					else if (v.getType() == TouchController.TYPE_TATACON_RECT) canvas.drawRect(r, p2);
 				}
 			}
 

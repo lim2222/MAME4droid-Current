@@ -17,11 +17,11 @@ android {
 	}
 
     defaultConfig {
-        applicationId "com.seleuco.mame4d2024"
+        applicationId "com.seleuco.mame4dtaiko"
         minSdkVersion 29
         targetSdkVersion 37
         versionCode 145
-        versionName '1.41.2'
+        versionName '1.41.2+taiko1.0'
 
         ndk {
             moduleName = "mame4droid-jni"
@@ -51,7 +51,7 @@ android {
         }
     }
 
-    packagingOptions {
+    packaging {
 		//doNotStrip "**/*.so" //CUIDADO QUITAR EN RELEASE. Lo he añadido al final con nueva sintaxis
         jniLibs {
             useLegacyPackaging = true

@@ -129,6 +129,13 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_CONTROLLER_DISABLE_BUTTONS_IN_GAME = "PREF_CONTROLLER_DISABLE_BUTTONS_IN_GAME";
 
 	final static public String PREF_ANIMATED_INPUT = "PREF_ANIMATED_INPUT";
+	final static public String PREF_TATACON = "PREF_TATACON";
+	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
+	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
+	final static public String PREF_TATACON_SCALEX_LAND = "PREF_TATACON_SCALEX_LAND";
+	final static public String PREF_TATACON_SCALEX_PORTRAIT = "PREF_TATACON_SCALEX_PORTRAIT";
+	final static public String PREF_TATACON_SCALEY_LAND = "PREF_TATACON_SCALEY_LAND";
+	final static public String PREF_TATACON_SCALEY_PORTRAIT = "PREF_TATACON_SCALEY_PORTRAIT";
 	final static public String PREF_TOUCH_LIGHTGUN = "PREF_TOUCH_LIGHTGUN";
 	final static public String PREF_TOUCH_LIGHTGUN_FORCE = "PREF_TOUCH_LIGHTGUN_FORCE";
 	final static public String PREF_TOUCH_DZ = "PREF_TOUCH_DZ";
@@ -467,6 +474,42 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	public boolean isAnimatedInput() {
 		return getSharedPreferences().getBoolean(PREF_ANIMATED_INPUT, true);
+	}
+
+	/** Taiko drum (tatacon) touch control enabled. */
+	public boolean isTatacon() {
+		return getSharedPreferences().getBoolean(PREF_TATACON, false);
+	}
+
+	/**
+	 * Taiko drum size, edited in the "customize layout" screen (move / resize
+	 * modes). X and Y are stored separately so the drum can be stretched.
+	 * Falls back to the legacy uniform scale preference when present.
+	 */
+	public float getTataconScaleX(boolean portrait) {
+		SharedPreferences p = getSharedPreferences();
+		float def = p.getFloat(portrait ? PREF_TATACON_SCALE_PORTRAIT : PREF_TATACON_SCALE_LAND, 1.0f);
+		return p.getFloat(portrait ? PREF_TATACON_SCALEX_PORTRAIT : PREF_TATACON_SCALEX_LAND, def);
+	}
+
+	public float getTataconScaleY(boolean portrait) {
+		SharedPreferences p = getSharedPreferences();
+		float def = p.getFloat(portrait ? PREF_TATACON_SCALE_PORTRAIT : PREF_TATACON_SCALE_LAND, 1.0f);
+		return p.getFloat(portrait ? PREF_TATACON_SCALEY_PORTRAIT : PREF_TATACON_SCALEY_LAND, def);
+	}
+
+	public void setTataconScales(boolean portrait, float scaleX, float scaleY) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putFloat(portrait ? PREF_TATACON_SCALEX_PORTRAIT : PREF_TATACON_SCALEX_LAND, clampTataconScale(scaleX));
+		editor.putFloat(portrait ? PREF_TATACON_SCALEY_PORTRAIT : PREF_TATACON_SCALEY_LAND, clampTataconScale(scaleY));
+		editor.commit();
+	}
+
+	/** 0.2x .. 20x, mirroring the Cemu / Vita3K tatacon resize clamp. */
+	private static float clampTataconScale(float value) {
+		if (value < 0.2f) return 0.2f;
+		if (value > 20.0f) return 20.0f;
+		return value;
 	}
 
 	public boolean isTouchDZ() {

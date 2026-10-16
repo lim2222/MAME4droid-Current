@@ -157,6 +157,10 @@
 			android:title="@string/pref_animated_title" android:summary="@string/pref_animated_summary"
 			android:defaultValue="true" />
 
+		<CheckBoxPreference android:key="PREF_TATACON"
+			android:title="@string/pref_tatacon_title" android:summary="@string/pref_tatacon_summary"
+			android:defaultValue="false" />
+
 		<ListPreference
 			android:entries="@array/pref_analog_vibrate_options"
 			android:title="@string/pref_analog_vibrate_title"

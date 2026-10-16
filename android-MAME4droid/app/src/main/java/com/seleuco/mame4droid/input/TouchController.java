@@ -86,6 +86,9 @@ public class TouchController implements IController {
 	final public static int TYPE_SWITCH = 6;
 	final public static int TYPE_ALPHA = 7;
 	final public static int TYPE_ANALOG_RECT = 8;
+	// Taiko no Tatsujin drum (tatacon). One entry defines the drum's bounding
+	// box; hit testing is radial and handled by TouchTaiko.
+	final public static int TYPE_TATACON_RECT = 9;
 
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
@@ -226,6 +229,12 @@ public class TouchController implements IController {
 
 			// Yield priority to the analog TouchStick if it's currently capturing this pointer
 			if (actionPointerId == mm.getInputHandler().getTouchStick().getMotionPid()) {
+				handled = true;
+				continue;
+			}
+
+			// Yield priority to the taiko drum if it owns this pointer
+			if (mm.getInputHandler().getTouchTaiko().handlesPointer(actionPointerId)) {
 				handled = true;
 				continue;
 			}
@@ -394,6 +403,9 @@ public class TouchController implements IController {
 	}
 
 	public Boolean isHandledStick(){
+		// The taiko drum replaces the stick / dpad while it is enabled.
+		if (mm.getPrefsHelper().isTatacon()) return false;
+
 		boolean hideStick = (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE ||
 			mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && Emulator.isPortraitFull())
 			&&
@@ -420,7 +432,19 @@ public class TouchController implements IController {
 		else if(type == TouchController.TYPE_STICK_IMG || type == TouchController.TYPE_STICK_RECT) {
 			handle = handleStick && mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD;
 		}
+		else if(type == TouchController.TYPE_TATACON_RECT) {
+			// Only shown while the taiko drum mode is enabled.
+			handle = mm.getPrefsHelper().isTatacon();
+		}
 		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT ){
+
+			// Taiko mode: the drum replaces the action buttons, only coin /
+			// start / option / exit are kept.
+			if(mm.getPrefsHelper().isTatacon()
+				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
+				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
+				return false;
+			}
 
 			if(mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && !Emulator.isPortraitFull()
 				|| ControlCustomizer.isEnabled()) {
@@ -475,12 +499,29 @@ public class TouchController implements IController {
 		return handle;
 	}
 
+	/**
+	 * True when the point falls on an on-screen button that would handle it.
+	 * Used by the taiko drum so that the coin / start / option / exit buttons
+	 * keep priority even when the drum covers the whole screen.
+	 */
+	public boolean isOverButton(int x, int y) {
+		if (values == null) return false;
+		for (int j = 0; j < values.size(); j++) {
+			InputValue iv = values.get(j);
+			if (iv.getType() == TYPE_BUTTON_RECT && isHandledTouchItem(iv) && iv.getRect().contains(x, y))
+				return true;
+		}
+		return false;
+	}
+
 	protected void fixControllerCoords(ArrayList<InputValue> values) {
 		if (values != null) {
 			for (int i = 0; i < values.size(); i++) {
 				values.get(i).setFixData(dx, dy, ax, ay);
 				if (values.get(i).getType() == TYPE_ANALOG_RECT)
 					mm.getInputHandler().getTouchStick().setStickArea(values.get(i).getRect());
+				else if (values.get(i).getType() == TYPE_TATACON_RECT)
+					mm.getInputHandler().getTouchTaiko().setArea(values.get(i).getRect());
 			}
 		}
 	}
@@ -494,8 +535,10 @@ public class TouchController implements IController {
 	}
 
 	protected void setButtonsSizes(ArrayList<InputValue> values) {
-		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && !Emulator.isPortraitFull())
-			return;
+		boolean portrait = mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT;
+		// In non-fullscreen portrait only the taiko drum is resized; the classic
+		// controls keep their fixed layout there to avoid clipping.
+		boolean portraitNonFull = portrait && !Emulator.isPortraitFull();
 
 		int sz = 0;
 		switch (mm.getPrefsHelper().getButtonsSize()) {
@@ -515,10 +558,20 @@ public class TouchController implements IController {
 			case 5: sz2 = 30; break;
 		}
 
-		if (values == null || (sz == 0 && sz2 == 0)) return;
+		// Taiko drum: X / Y scale factors edited in the customizer, grown /
+		// shrunk symmetrically around the control centre.
+		float taikoScaleX = mm.getPrefsHelper().getTataconScaleX(portrait);
+		float taikoScaleY = mm.getPrefsHelper().getTataconScaleY(portrait);
+		boolean tataconScaled = Math.abs(taikoScaleX - 1.0f) > 0.0001f
+			|| Math.abs(taikoScaleY - 1.0f) > 0.0001f;
+
+		if (values == null) return;
+		if (!tataconScaled && (sz == 0 && sz2 == 0)) return;
 
 		for (int j = 0; j < values.size(); j++) {
 			InputValue iv = values.get(j);
+
+			if (portraitNonFull && iv.getType() != TYPE_TATACON_RECT) continue;
 
 			if (iv.getType() == TYPE_BUTTON_IMG || iv.getType() == TYPE_BUTTON_RECT) {
 				if (iv.getValue() != BTN_EXIT && iv.getValue() != BTN_OPTION && iv.getValue() != BTN_START && iv.getValue() != BTN_COIN)
@@ -540,6 +593,17 @@ public class TouchController implements IController {
 			} else if (iv.getType() == TYPE_ANALOG_RECT) {
 				iv.setSize(0, 0, sz2, sz2);
 				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
+			} else if (iv.getType() == TYPE_TATACON_RECT) {
+				// setSize() values are layout units (multiplied by dx / dy later),
+				// so derive the delta from the original layout width / height.
+				int baseW = iv.getOrigRect().width();
+				int baseH = iv.getOrigRect().height();
+				int dX = (int) (baseW * (taikoScaleX - 1.0f));
+				int dY = (int) (baseH * (taikoScaleY - 1.0f));
+				if ((dX & 1) != 0) dX++; // keep the growth symmetric
+				if ((dY & 1) != 0) dY++;
+				iv.setSize(-dX / 2, -dY / 2, dX / 2, dY / 2);
+				mm.getInputHandler().getTouchTaiko().setArea(iv.getRect());
 			}
 		}
 	}
