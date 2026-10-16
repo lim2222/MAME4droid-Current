@@ -112,6 +112,8 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_PORTRAIT_SCALING_MODE = "PREF_PORTRAIT_SCALING_MODE";
 	final static public String PREF_PORTRAIT_TOUCH_CONTROLLER = "PREF_PORTRAIT_TOUCH_CONTROLLER";
 	final static public String PREF_PORTRAIT_FULLSCREEN = "PREF_PORTRAIT_FULLSCREEN";
+	// Vertical shift of the emulated picture in portrait fullscreen, in dp.
+	final static public String PREF_PORTRAIT_Y_OFFSET = "PREF_PORTRAIT_Y_OFFSET";
 
 	final static public String PREF_LANDSCAPE_SCALING_MODE = "PREF_LANDSCAPE_SCALING_MODE";
 	final static public String PREF_LANDSCAPE_TOUCH_CONTROLLER = "PREF_LANDSCAPE_TOUCH_CONTROLLER";
@@ -377,6 +379,16 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	public boolean isPortraitFullscreen() {
 		return getSharedPreferences().getBoolean(PREF_PORTRAIT_FULLSCREEN, false);
+	}
+
+	/**
+	 * How far (in dp) the emulated picture is pushed down in portrait fullscreen,
+	 * so it clears a camera cutout or the rounded screen corners. 0 = no shift.
+	 * {@code SeekBarPreference} has no min attribute, so clamp defensively.
+	 */
+	public int getPortraitYOffset() {
+		int value = getSharedPreferences().getInt(PREF_PORTRAIT_Y_OFFSET, 0);
+		return value < 0 ? 0 : value;
 	}
 
 	public boolean isLandscapeTouchController() {

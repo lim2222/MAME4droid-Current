@@ -780,6 +780,8 @@ galaxy sde	   --> 2560x1600 16:10
 		inputView.requestLayout();
         emuView.requestLayout();
 
+		applyPortraitYOffset();
+
 		inputView.invalidate();
         emuView.invalidate();
 
@@ -1267,6 +1269,32 @@ galaxy sde	   --> 2560x1600 16:10
 			alpha = (255 * mm.getPrefsHelper().getButtonsAlpha())/100;
 
 		return alpha;
+	}
+
+	/**
+	 * Pushes the emulated picture down in portrait fullscreen, so it is not hidden
+	 * behind a camera cutout or the rounded screen corners.
+	 *
+	 * The shift is applied as a translation of the emulator view, which moves the
+	 * picture without changing the size the emulator renders at (no distortion and
+	 * no re-scale). Translating the view also keeps
+	 * {@code View.getLocationOnScreen()} correct, so touch / lightgun coordinates
+	 * keep matching the picture. It is a no-op outside portrait fullscreen.
+	 */
+	public void applyPortraitYOffset() {
+		View emuView = mm.getEmuView();
+		if (emuView == null) return;
+
+		float offset = 0f;
+
+		if (mm.getPrefsHelper().isPortraitFullscreen()
+				&& this.getscrOrientation() == Configuration.ORIENTATION_PORTRAIT) {
+			offset = mm.getPrefsHelper().getPortraitYOffset()
+					* mm.getResources().getDisplayMetrics().density;
+		}
+
+		if (emuView.getTranslationY() != offset)
+			emuView.setTranslationY(offset);
 	}
 
 }

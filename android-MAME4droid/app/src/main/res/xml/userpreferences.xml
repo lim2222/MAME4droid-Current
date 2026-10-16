@@ -979,6 +979,11 @@
 			android:dependency="PREF_PORTRAIT_TOUCH_CONTROLLER"
 			/>
 
+		<SeekBarPreference android:key="PREF_PORTRAIT_Y_OFFSET"
+			android:title="@string/pref_portrait_y_offset_title" android:summary="@string/pref_portrait_y_offset_summary"
+			android:max="200" android:defaultValue="0"
+			android:dependency="PREF_PORTRAIT_FULLSCREEN" />
+
 	</PreferenceCategory>
 
 	<PreferenceCategory android:title="@string/cat_landscape_display">
