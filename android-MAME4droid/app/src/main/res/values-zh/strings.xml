@@ -328,6 +328,8 @@
     <string name="pref_tatacon_summary">显示太鼓达人触摸鼓面代替摇杆。中心=咚（don），其余全部=咔（ka），左右各分一半。在“自定义布局”里用 MOVE 拖动位置，用 RESIZE 调整大小（横向拖动改宽度，纵向拖动改高度）</string>
     <string name="pref_vibrate_title">震动</string>
     <string name="pref_vibrate_summary">总开关：触摸控制、模拟摇杆、光枪和鼠标的震动反馈</string>
+    <string name="pref_vibrate_strength_title">震动强度</string>
+    <string name="pref_vibrate_strength_summary">震动强度 1 到 255。连续快速敲击会变成柔和的滚动震动，单次敲击保持全功率冲击感</string>
     <string name="pref_analog_vibrate_title">模拟摇杆震动</string>
     <string name="pref_analog_vibrate_summary">仅在握住摇杆时震动，或在方向改变时也震动（如街机微动开关）</string>
     <string name="analog_vibrate_grab">仅握住摇杆时</string>

@@ -101,6 +101,11 @@
 			android:title="@string/pref_vibrate_title" android:summary="@string/pref_vibrate_summary"
 			android:defaultValue="false" />
 
+		<SeekBarPreference android:key="PREF_VIBRATE_STRENGTH"
+			android:title="@string/pref_vibrate_strength_title" android:summary="@string/pref_vibrate_strength_summary"
+			android:max="255" android:defaultValue="255"
+			android:dependency="PREF_VIBRATE_2" />
+
     <PreferenceScreen android:key="touchController" android:title="@string/prefscr_touch_controller_title"
 	        android:summary="@string/prefscr_touch_controller_summary" android:persistent="false">
 

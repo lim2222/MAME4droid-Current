@@ -349,6 +349,8 @@
     <string name="pref_tatacon_summary">Show an on-screen Taiko no Tatsujin drum instead of the stick. Centre = don, everything else = ka, each split into left/right. In Customize layout use MOVE to drag it and RESIZE to change its size (drag sideways for width, up/down for height)</string>
     <string name="pref_vibrate_title">Vibrate</string>
     <string name="pref_vibrate_summary">Master switch: haptic feedback for touch controls, analog stick, lightgun and mouse</string>
+    <string name="pref_vibrate_strength_title">Vibration strength</string>
+    <string name="pref_vibrate_strength_summary">Haptic strength from 1 to 255. Rapid hits ease into a smooth rolling pulse, single taps stay a full-power impact</string>
     <string name="pref_analog_vibrate_title">Analog stick vibration</string>
     <string name="pref_analog_vibrate_summary">Vibrate only when grabbing the stick, or also on direction changes like arcade microswitches</string>
     <string name="analog_vibrate_grab">Stick grab only</string>

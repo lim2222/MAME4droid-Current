@@ -50,6 +50,7 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
@@ -663,32 +664,33 @@ public class TouchController implements IController {
 		}
 	}
 
-	// Haptics engine : vibrator and effects are resolved once,
-	// and the vibrate binder call runs on its own thread so it never delays
-	// the touch path. Latency is what makes haptics feel crisp or mushy.
+	// Haptics engine : the vibrator is resolved once, the vibrate binder call runs on
+	// its own thread so it never delays the touch path, and every hit becomes a short
+	// amplitude-scaled one-shot. Latency and pulse shape are what make haptics feel
+	// crisp instead of mushy.
+	private static final long HAPTIC_DEBOUNCE_MS = 40L;
+	private static final long HAPTIC_RAPID_WINDOW_MS = 180L;
+
 	private boolean hapticInitDone = false;
 	private Vibrator hapticVibrator = null;
-	private VibrationEffect hapticPressEffect = null;
-	private VibrationEffect hapticTickEffect = null;
 	private Handler hapticHandler = null;
+	private long lastVibrateTime = 0L;
 
 	protected void vibrate() {
-		fireHaptic(true);
+		fireHaptic(1.0f);
 	}
 
 	// Lighter effect so secondary buttons (2/3) feel different from button 1
 	protected void vibrateSecondary() {
-		fireHaptic(false);
+		fireHaptic(0.5f);
 	}
 
-	private void fireHaptic(boolean primary) {
+	private void fireHaptic(float scale) {
 		if (!hapticInitDone) {
 			hapticInitDone = true;
 			Vibrator v = (Vibrator) mm.getSystemService(Context.VIBRATOR_SERVICE);
 			if (v != null && v.hasVibrator()) {
 				hapticVibrator = v;
-				hapticPressEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK);
-				hapticTickEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK);
 				HandlerThread ht = new HandlerThread("haptic-events");
 				ht.start();
 				hapticHandler = new Handler(ht.getLooper());
@@ -696,7 +698,33 @@ public class TouchController implements IController {
 		}
 		if (hapticVibrator == null) return;
 
-		final VibrationEffect effect = primary ? hapticPressEffect : hapticTickEffect;
+		final int strength = Math.round(mm.getPrefsHelper().getVibrateStrength() * scale);
+		if (strength <= 0) return;
+
+		final long now = SystemClock.uptimeMillis();
+		final long delta = now - lastVibrateTime;
+
+		// CRITICAL FIX FOR DUAL-HAND HITS: prevent a second finger from cancelling the
+		// ongoing rumble within the debounce window.
+		if (delta < HAPTIC_DEBOUNCE_MS) return;
+		lastVibrateTime = now;
+
+		final float norm = strength / 255f;
+		final int duration;
+		final int amplitude;
+		if (delta < HAPTIC_RAPID_WINDOW_MS) {
+			// SMOOTH ROLLING MODE: rapid hits get a soft, longer low-amplitude pulse so the
+			// motor keeps moving smoothly instead of stopping and restarting with a clack.
+			duration = 50 + Math.round(norm * 15f);                                // 50..65 ms
+			amplitude = Math.max(1, Math.round(strength * 0.33f));                 // ~1/3 power
+		} else {
+			// SINGLE TAP MODE: full-power short impact for a deep, solid tap.
+			duration = 45 + Math.round(norm * 40f);                                // 45..85 ms
+			amplitude = strength;
+		}
+
+		final int amp = Math.min(255, Math.max(1, amplitude));
+		final VibrationEffect effect = VibrationEffect.createOneShot(duration, amp);
 		hapticHandler.post(() -> hapticVibrator.vibrate(effect));
 	}
 }

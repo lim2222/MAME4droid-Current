@@ -148,6 +148,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_GAMEPAD_DZ = "PREF_GAMEPAD_DZ";
 	// Key bumped to _2: the smart default (haptic hardware check) re-seeds on update
 	final static public String PREF_VIBRATE = "PREF_VIBRATE_2";
+	final static public String PREF_VIBRATE_STRENGTH = "PREF_VIBRATE_STRENGTH";
 	final static public String PREF_ANALOG_VIBRATE_MODE = "PREF_ANALOG_VIBRATE_MODE";
 	final static public String PREF_MOUSE = "PREF_MOUSE";
 	final static public String PREF_TOUCH_MOUSE = "PREF_TOUCH_MOUSE";
@@ -634,6 +635,15 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	public boolean isVibrate() {
 		return getSharedPreferences().getBoolean(PREF_VIBRATE, false);
+	}
+
+	// Touch haptic strength, 1..255 (255 = strongest). Clamped so a slider that
+	// was left at 0 can never silently mute the haptics.
+	public int getVibrateStrength() {
+		int v = getSharedPreferences().getInt(PREF_VIBRATE_STRENGTH, 255);
+		if (v < 1) return 1;
+		if (v > 255) return 255;
+		return v;
 	}
 
 	public int getAnalogVibrateMode() {
