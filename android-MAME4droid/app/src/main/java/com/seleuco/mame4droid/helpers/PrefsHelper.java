@@ -123,6 +123,9 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	final static public String PREF_DEFINED_CONTROL_LAYOUT = "PREF_DEFINED_CONTROL_LAYOUT";
 	final static public String PREF_DEFINED_CONTROL_LAYOUT_P = "PREF_DEFINED_CONTROL_LAYOUT_P";
+	// Per-control opacity set in the layout customizer (type,value,alpha triples).
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_ALPHA = "PREF_DEFINED_CONTROL_LAYOUT_ALPHA";
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA = "PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA";
 
 	final static public String PREF_DISABLE_RIGHT_STICK = "PREF_DISABLE_RIGHT_STICK";
 	final static public String PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND = "PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND";
@@ -728,6 +731,26 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	public void setDefinedControlLayoutPortrait(String value) {
 		SharedPreferences.Editor editor = getSharedPreferences().edit();
 		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutAlphaLand() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_ALPHA, null);
+	}
+
+	public void setDefinedControlLayoutAlphaLand(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_ALPHA, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutAlphaPortrait() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, null);
+	}
+
+	public void setDefinedControlLayoutAlphaPortrait(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, value);
 		editor.commit();
 	}
 

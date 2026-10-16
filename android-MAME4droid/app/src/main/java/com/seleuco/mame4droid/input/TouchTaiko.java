@@ -170,6 +170,13 @@ public class TouchTaiko implements IController {
         }
     }
 
+    // Per-control opacity override (-1 = follow the global button alpha).
+    private int areaAlpha = -1;
+
+    public void setAreaAlpha(int alpha) {
+        this.areaAlpha = alpha;
+    }
+
     public void setArea(Rect r) {
         if (r == null || r.isEmpty()) return;
         area.set(r);
@@ -345,7 +352,7 @@ public class TouchTaiko implements IController {
         if (mm == null || area.isEmpty() || halfW <= 0f || halfH <= 0f) return;
         resolveImage();
 
-        int alpha = mm.getMainHelper().getControllerAlpha();
+        int alpha = areaAlpha >= 0 ? areaAlpha : mm.getMainHelper().getControllerAlpha();
 
         boolean pressed = (heldMask != 0);
         boolean donPressed = (heldMask & (BTN3_VALUE | BTN2_VALUE)) != 0;

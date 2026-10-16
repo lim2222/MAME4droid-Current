@@ -254,18 +254,27 @@ public class InputView extends ImageView {
 
 		// Loop through every defined input element (stick, buttons).
 		for (InputValue v : data) {
+			// A control edited in the layout customizer carries its own opacity;
+			// everything else follows the global button alpha.
+			int alpha = v.getAlpha() >= 0 ? v.getAlpha() : controllerAlpha;
+
 			if (v.getType() == TouchController.TYPE_STICK_IMG) {
 				// Set the bounds and alpha for all 9 stick direction images.
 				for (BitmapDrawable stick_image : stick_images) {
 					stick_image.setBounds(v.getRect());
-					stick_image.setAlpha(controllerAlpha);
+					stick_image.setAlpha(alpha);
 				}
 			} else if (v.getType() == TouchController.TYPE_BUTTON_IMG) {
 				// Set the bounds and alpha for both the pressed and unpressed states of this button.
 				btns_images[v.getValue()][IController.BTN_PRESS_STATE].setBounds(v.getRect());
-				btns_images[v.getValue()][IController.BTN_PRESS_STATE].setAlpha(controllerAlpha);
+				btns_images[v.getValue()][IController.BTN_PRESS_STATE].setAlpha(alpha);
 				btns_images[v.getValue()][IController.BTN_NO_PRESS_STATE].setBounds(v.getRect());
-				btns_images[v.getValue()][IController.BTN_NO_PRESS_STATE].setAlpha(controllerAlpha);
+				btns_images[v.getValue()][IController.BTN_NO_PRESS_STATE].setAlpha(alpha);
+			} else if (v.getType() == TouchController.TYPE_ANALOG_RECT) {
+				// The stick draws itself, so hand it the resolved opacity.
+				mm.getInputHandler().getTouchStick().setStickAreaAlpha(alpha);
+			} else if (v.getType() == TouchController.TYPE_TATACON_RECT) {
+				mm.getInputHandler().getTouchTaiko().setAreaAlpha(alpha);
 			}
 		}
 	}

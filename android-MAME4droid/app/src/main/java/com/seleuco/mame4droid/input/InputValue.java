@@ -70,6 +70,10 @@ public class InputValue {
     private int xoff = 0;
     private int yoff = 0;
 
+    // Per-control opacity override: -1 means "not set, follow the global button
+    // alpha", 0..255 is an explicit value set in the layout customizer.
+    private int alpha = -1;
+
     private int sz_x1;
     private int sz_y1;
     private int sz_x2;
@@ -182,5 +186,14 @@ public class InputValue {
 
     public int getYoff() {
         return yoff;
+    }
+
+    /** Explicit opacity 0..255, or -1 when this control has none and follows the global alpha. */
+    public int getAlpha() {
+        return alpha;
+    }
+
+    public void setAlpha(int alpha) {
+        this.alpha = alpha;
     }
 }

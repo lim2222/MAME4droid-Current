@@ -127,6 +127,18 @@ public class TouchStick implements IController {
 		}
 	}
 
+	// Per-control opacity override (-1 = follow the global button alpha).
+	private int areaAlpha = -1;
+
+	public void setStickAreaAlpha(int alpha) {
+		this.areaAlpha = alpha;
+	}
+
+	/** Opacity to draw the stick with: the explicit override, else the global alpha. */
+	private int stickAlpha() {
+		return areaAlpha >= 0 ? areaAlpha : mm.getMainHelper().getControllerAlpha();
+	}
+
 	public void setStickArea(Rect rStickArea) {
 		this.rStickArea = rStickArea;
 		ptMin.x = rStickArea.left;
@@ -406,18 +418,19 @@ public class TouchStick implements IController {
 	public void draw(Canvas canvas) {
 		TiltSensor tiltSensor = mm.getInputHandler().getTiltSensor();
 		int orientation = mm.getMainHelper().getscrOrientation();
+		int alpha = stickAlpha();
 
 		if (mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_ANALOG_STICK && !tiltSensor.isEnabled()) {
 
 			if (orientation == Configuration.ORIENTATION_LANDSCAPE ||
 				(orientation == Configuration.ORIENTATION_PORTRAIT && Emulator.isPortraitFull())) {
 				outer_img.setBounds(rStickArea);
-				outer_img.setAlpha(mm.getMainHelper().getControllerAlpha());
+				outer_img.setAlpha(alpha);
 				outer_img.draw(canvas);
 			}
 
 			inner_img.setBounds(stickPos);
-			inner_img.setAlpha(mm.getMainHelper().getControllerAlpha());
+			inner_img.setAlpha(alpha);
 			inner_img.draw(canvas);
 
 		} else if (mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_DIGITAL_STICK ||
@@ -425,7 +438,7 @@ public class TouchStick implements IController {
 
 			int currentState = mm.getInputHandler().getTouchController().getStick_state();
 			stick_images[currentState].setBounds(rStickArea);
-			stick_images[currentState].setAlpha(mm.getMainHelper().getControllerAlpha());
+			stick_images[currentState].setAlpha(alpha);
 			stick_images[currentState].draw(canvas);
 		}
 

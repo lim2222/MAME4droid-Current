@@ -85,8 +85,20 @@ public class ControlCustomizer {
 	private float initialTataconScaleX = 1f;
 	private float initialTataconScaleY = 1f;
 
-	// Edit modes: false = move the controls, true = resize the taiko drum.
-	private boolean resizeMode = false;
+	// Edit modes. Only one is active at a time.
+	private static final int MODE_MOVE = 0;
+	private static final int MODE_RESIZE = 1;
+	private static final int MODE_OPACITY = 2;
+	private int mode = MODE_MOVE;
+
+	// Opacity editing (MODE_OPACITY): one pixel of horizontal drag is one step of
+	// alpha, so sweeping the whole 0..255 range takes a 255 px drag.
+	private static final int ALPHA_STEP_PER_PX = 1;
+
+	// Alpha of the control being dragged. Kept up to date incrementally so that
+	// reversing the drag responds at once even after the range was clamped.
+	private int draggingAlpha = 255;
+	private int lastDragX = 0;
 
 	protected MAME4droid mm = null;
 
@@ -94,9 +106,11 @@ public class ControlCustomizer {
 	private Rect saveButtonRect = new Rect();
 	private Rect moveButtonRect = new Rect();
 	private Rect resizeButtonRect = new Rect();
+	private Rect opacityButtonRect = new Rect();
 	private Paint pButton;
 	private Paint pButtonOff;
 	private Paint pText;
+	private Paint pValue;
 	private Paint pRect;
 	private boolean paintsInitialized = false;
 
@@ -130,12 +144,15 @@ public class ControlCustomizer {
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		for (InputValue iv : values) {
 			iv.setOffsetTMP(0, 0);
+			// Drop opacities edited since the last save; the saved ones are re-applied below.
+			iv.setAlpha(-1);
 			if (iv.getType() == TouchController.TYPE_ANALOG_RECT) {
 				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
 			} else if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
 				applyTataconScale(iv, tataconScaleX, tataconScaleY);
 			}
 		}
+		readDefinedControlLayoutAlpha(values, portrait);
 		mm.getInputView().updateImages();
 	}
 
@@ -181,6 +198,7 @@ public class ControlCustomizer {
 	 */
 	public void saveDefinedControlLayout() {
 		StringBuilder definedStr = new StringBuilder();
+		StringBuilder alphaStr = new StringBuilder();
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		boolean first = true;
 
@@ -197,13 +215,26 @@ public class ControlCustomizer {
 					.append(iv.getYoff());
 				first = false;
 			}
+
+			// Opacities live in their own, independent list so the position format
+			// above stays backwards compatible.
+			if (iv.getAlpha() >= 0) {
+				if (alphaStr.length() > 0) {
+					alphaStr.append(",");
+				}
+				alphaStr.append(iv.getType()).append(",")
+					.append(iv.getValue()).append(",")
+					.append(iv.getAlpha());
+			}
 		}
 
 		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE) {
 			mm.getPrefsHelper().setDefinedControlLayoutLand(definedStr.toString());
+			mm.getPrefsHelper().setDefinedControlLayoutAlphaLand(alphaStr.toString());
 			mm.getPrefsHelper().setTataconScales(false, tataconScaleX, tataconScaleY);
 		} else {
 			mm.getPrefsHelper().setDefinedControlLayoutPortrait(definedStr.toString());
+			mm.getPrefsHelper().setDefinedControlLayoutAlphaPortrait(alphaStr.toString());
 			mm.getPrefsHelper().setTataconScales(true, tataconScaleX, tataconScaleY);
 		}
 	}
@@ -257,7 +288,44 @@ public class ControlCustomizer {
 				}
 			}
 		}
+		readDefinedControlLayoutAlpha(values, portrait);
 		mm.getInputView().updateImages();
+	}
+
+	/**
+	 * Restores the per-control opacity overrides saved by the customizer. Stored as
+	 * {@code type,value,alpha} triples, separately from the position offsets.
+	 */
+	private void readDefinedControlLayoutAlpha(ArrayList<InputValue> values, boolean portrait) {
+		String alphaStr = portrait
+			? mm.getPrefsHelper().getDefinedControlLayoutAlphaPortrait()
+			: mm.getPrefsHelper().getDefinedControlLayoutAlphaLand();
+
+		if (alphaStr == null || alphaStr.isEmpty()) return;
+
+		String[] tokens = alphaStr.split(",");
+
+		// Failsafe: Ensure data stream is intact (Type, Value, Alpha chunks)
+		if (tokens.length % 3 != 0) return;
+
+		for (int i = 0; i < tokens.length; i += 3) {
+			try {
+				int type = Integer.parseInt(tokens[i]);
+				int value = Integer.parseInt(tokens[i + 1]);
+				int alpha = Integer.parseInt(tokens[i + 2]);
+
+				if (alpha < 0 || alpha > 255) continue;
+
+				for (InputValue iv : values) {
+					if (iv.getType() == type && iv.getValue() == value) {
+						iv.setAlpha(alpha);
+						break;
+					}
+				}
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
@@ -307,12 +375,17 @@ public class ControlCustomizer {
 
 				// Mode toggles / save button.
 				if (moveButtonRect.contains(x, y)) {
-					resizeMode = false;
+					mode = MODE_MOVE;
 					mm.getInputView().invalidate();
 					return;
 				}
 				if (resizeButtonRect.contains(x, y)) {
-					resizeMode = true;
+					mode = MODE_RESIZE;
+					mm.getInputView().invalidate();
+					return;
+				}
+				if (opacityButtonRect.contains(x, y)) {
+					mode = MODE_OPACITY;
 					mm.getInputView().invalidate();
 					return;
 				}
@@ -324,7 +397,7 @@ public class ControlCustomizer {
 
 				ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 
-				if (resizeMode) {
+				if (mode == MODE_RESIZE) {
 					// Resize mode only affects the taiko drum (its size is the one
 					// that is persisted). Horizontal drag = X size, vertical = Y.
 					InputValue drum = findMovable(values, x, y, true);
@@ -333,9 +406,16 @@ public class ControlCustomizer {
 						initialTataconScaleY = tataconScaleY;
 					}
 				} else {
-					// Move mode: buttons keep grab priority over the drum.
+					// Move / opacity mode: buttons keep grab priority over the drum.
 					if (findMovable(values, x, y, false) == null) {
 						findMovable(values, x, y, true);
+					}
+					if (mode == MODE_OPACITY && valueMoved != null) {
+						// Start from whatever the control currently shows, so the
+						// first drag never jumps.
+						int current = valueMoved.getAlpha();
+						draggingAlpha = current >= 0 ? current : mm.getMainHelper().getControllerAlpha();
+						lastDragX = x;
 					}
 				}
 				break;
@@ -352,7 +432,7 @@ public class ControlCustomizer {
 				int deltaX = currX - initialTouchX;
 				int deltaY = currY - initialTouchY;
 
-				if (resizeMode && valueMoved.getType() == TouchController.TYPE_TATACON_RECT) {
+				if (mode == MODE_RESIZE && valueMoved.getType() == TouchController.TYPE_TATACON_RECT) {
 					// One layout unit maps to dx / dy screen pixels.
 					TouchController tc = mm.getInputHandler().getTouchController();
 					float baseWpx = valueMoved.getOrigRect().width() * tc.dx;
@@ -364,6 +444,18 @@ public class ControlCustomizer {
 					tataconScaleY = clampTataconScale(initialTataconScaleY + deltaY / baseHpx);
 					applyTataconScale(valueMoved, tataconScaleX, tataconScaleY);
 					mm.getInputView().updateImages();
+					mm.getInputView().invalidate();
+					break;
+				}
+
+				if (mode == MODE_OPACITY) {
+					// Slide right to increase, left to decrease. Measured against the
+					// previous event so hitting the clamp does not "stick".
+					draggingAlpha = clampAlpha(draggingAlpha
+						+ (currX - lastDragX) * ALPHA_STEP_PER_PX);
+					lastDragX = currX;
+
+					applyControlAlpha(valueMoved, draggingAlpha);
 					mm.getInputView().invalidate();
 					break;
 				}
@@ -404,6 +496,49 @@ public class ControlCustomizer {
 		return value;
 	}
 
+	private static int clampAlpha(int value) {
+		if (value < 0) return 0;
+		if (value > 255) return 255;
+		return value;
+	}
+
+	/**
+	 * Sets the opacity of a control and of everything sharing its artwork, then
+	 * refreshes the drawn images so the change is visible immediately.
+	 */
+	private void applyControlAlpha(InputValue iv, int alpha) {
+		if (iv == null) return;
+
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+
+		if (iv.getType() == TouchController.TYPE_BUTTON_RECT) {
+			// The artwork is drawn from the matching TYPE_BUTTON_IMG entry.
+			iv.setAlpha(alpha);
+			for (InputValue other : values) {
+				if (other.getType() == TouchController.TYPE_BUTTON_IMG && other.getValue() == iv.getValue()) {
+					other.setAlpha(alpha);
+					break;
+				}
+			}
+		} else if (iv.getType() == TouchController.TYPE_STICK_IMG ||
+			iv.getType() == TouchController.TYPE_ANALOG_RECT) {
+			// The stick is a single visual unit, so keep every related entry equal.
+			for (InputValue other : values) {
+				if (other.getType() == TouchController.TYPE_STICK_RECT ||
+					other.getType() == TouchController.TYPE_STICK_IMG ||
+					other.getType() == TouchController.TYPE_ANALOG_RECT) {
+					other.setAlpha(alpha);
+				}
+			}
+		} else {
+			iv.setAlpha(alpha);
+		}
+
+		// updateImages() also pushes the resolved alpha to the stick and the drum,
+		// which draw themselves rather than using a Drawable.
+		mm.getInputView().updateImages();
+	}
+
 	/**
 	 * Lazy-load Paint objects to ensure strict memory constraints on the UI thread.
 	 */
@@ -425,6 +560,15 @@ public class ControlCustomizer {
 		pText.setTextSize(30);
 		pText.setTypeface(Typeface.DEFAULT_BOLD);
 		pText.setTextAlign(Paint.Align.CENTER);
+
+		// Live opacity readout: white with a dark halo so it stays readable on any
+		// game artwork underneath.
+		pValue = new Paint();
+		pValue.setColor(Color.WHITE);
+		pValue.setTextSize(40);
+		pValue.setTypeface(Typeface.DEFAULT_BOLD);
+		pValue.setTextAlign(Paint.Align.CENTER);
+		pValue.setShadowLayer(6f, 0f, 0f, Color.BLACK);
 
 		pRect = new Paint();
 		pRect.setARGB(30, 255, 255, 255);
@@ -482,18 +626,29 @@ public class ControlCustomizer {
 
 		// Mode / save buttons on a single row along the top edge so they never
 		// sit on top of the controls being edited.
-		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 4 * BUTTON_MARGIN) / 3);
-		int totalW = btnW * 3 + 2 * BUTTON_MARGIN;
+		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 5 * BUTTON_MARGIN) / 4);
+		int totalW = btnW * 4 + 3 * BUTTON_MARGIN;
 		int startX = (canvas.getWidth() - totalW) / 2;
 		int top = BUTTON_MARGIN;
 		int bottom = top + BUTTON_HEIGHT;
 
 		moveButtonRect.set(startX, top, startX + btnW, bottom);
 		resizeButtonRect.set(startX + btnW + BUTTON_MARGIN, top, startX + 2 * btnW + BUTTON_MARGIN, bottom);
-		saveButtonRect.set(startX + 2 * (btnW + BUTTON_MARGIN), top, startX + 3 * btnW + 2 * BUTTON_MARGIN, bottom);
+		opacityButtonRect.set(startX + 2 * (btnW + BUTTON_MARGIN), top, startX + 3 * btnW + 2 * BUTTON_MARGIN, bottom);
+		saveButtonRect.set(startX + 3 * (btnW + BUTTON_MARGIN), top, startX + 4 * btnW + 3 * BUTTON_MARGIN, bottom);
 
-		drawButton(canvas, moveButtonRect, "MOVE", !resizeMode);
-		drawButton(canvas, resizeButtonRect, "RESIZE", resizeMode);
+		drawButton(canvas, moveButtonRect, "MOVE", mode == MODE_MOVE);
+		drawButton(canvas, resizeButtonRect, "RESIZE", mode == MODE_RESIZE);
+		drawButton(canvas, opacityButtonRect, "OPACITY", mode == MODE_OPACITY);
 		drawButton(canvas, saveButtonRect, "SAVE", true);
+
+		// While editing opacity, show the live percentage on the control being
+		// dragged so the value is not guesswork.
+		if (mode == MODE_OPACITY && valueMoved != null) {
+			Rect r = valueMoved.getRect();
+			int percent = Math.round(draggingAlpha * 100f / 255f);
+			float textY = r.centerY() - ((pValue.descent() + pValue.ascent()) / 2);
+			canvas.drawText(percent + "%", r.centerX(), textY, pValue);
+		}
 	}
 }
