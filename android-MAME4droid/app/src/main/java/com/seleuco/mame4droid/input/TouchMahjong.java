@@ -117,7 +117,7 @@ public class TouchMahjong implements IController {
         R.drawable.mj_bet_3, R.drawable.mj_take_rcontrol, R.drawable.mj_doubleup_rshift,
         R.drawable.mj_big_enter, R.drawable.mj_small_backspace, R.drawable.mj_lastchance_ralt,
         R.drawable.mj_bookkeeping_0, R.drawable.mj_credit_9, R.drawable.mj_payout_4,
-        R.drawable.mj_service_f2, R.drawable.mj_left_k, R.drawable.mj_right_l,
+        R.drawable.mj_service_f2, R.drawable.mj_left_k, R.drawable.mj_right_m,
         R.drawable.mj_dplay_a, R.drawable.mj_hplay_e, R.drawable.mj_splay_c
     };
 
@@ -137,7 +137,7 @@ public class TouchMahjong implements IController {
         KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_SHIFT_RIGHT,
         KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ALT_RIGHT,
         KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_4,
-        KeyEvent.KEYCODE_F2, KeyEvent.KEYCODE_K, KeyEvent.KEYCODE_L,
+        KeyEvent.KEYCODE_F2, KeyEvent.KEYCODE_K, KeyEvent.KEYCODE_M,
         KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_E, KeyEvent.KEYCODE_C
     };
 
