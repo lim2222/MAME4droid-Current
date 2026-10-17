@@ -169,7 +169,9 @@ public class ControlCustomizer {
 		if (values == null) return;
 
 		for (InputValue iv : values) {
-			if (!isResetGroup(group, iv)) continue;
+			// Controls of a panel that is not on screen are left alone: resetting
+			// them here would silently throw away a layout the user cannot see.
+			if (!isResetGroup(group, iv) || !isEditable(iv)) continue;
 
 			// Clears both the committed offset and the temporary one.
 			iv.setOffset(0, 0);
@@ -275,11 +277,35 @@ public class ControlCustomizer {
 	}
 
 	/**
+	 * True when this control is part of the layout currently on screen, i.e. one
+	 * the customizer is allowed to show and edit. The same predicate the game
+	 * uses to decide what to draw and what takes touches, so panels that are
+	 * switched off leave nothing behind to grab: outside taiko mode the drum is
+	 * gone, and while taiko or mahjong is on the dpad / stick / action buttons
+	 * are gone. An invisible control can therefore never be edited by accident.
+	 */
+	private boolean isEditable(InputValue iv) {
+		return Boolean.TRUE.equals(
+			mm.getInputHandler().getTouchController().isHandledTouchItem(iv));
+	}
+
+	/** True when the group has at least one control on screen right now. */
+	private boolean isGroupEditable(int group) {
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+		if (values == null) return false;
+		for (InputValue iv : values) {
+			if (isResetGroup(group, iv) && isEditable(iv)) return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Pick the control to drag at (x, y). When {@code tatacon} is false the drum
 	 * is skipped, so the small on-screen buttons keep grab priority.
 	 */
 	private InputValue findMovable(ArrayList<InputValue> values, int x, int y, boolean tatacon) {
 		for (InputValue iv : values) {
+			if (!isEditable(iv)) continue;
 			boolean isTatacon = (iv.getType() == TouchController.TYPE_TATACON_RECT);
 			if (isTatacon != tatacon) continue;
 			if ((iv.getType() == TouchController.TYPE_BUTTON_RECT ||
@@ -941,7 +967,9 @@ public class ControlCustomizer {
 					draw = true;
 				}
 
-				if (draw) {
+				// Only the controls of the active panel get a hitbox: an invisible
+				// control must not look grabbable either.
+				if (draw && isEditable(v)) {
 					// Hidden controls get a red box so they are easy to spot while
 					// the customizer is open.
 					canvas.drawRect(r, v.isHidden() ? pHiddenRect : pRect);
@@ -981,9 +1009,14 @@ public class ControlCustomizer {
 		resetTaikoButtonRect.set(rStart + 2 * rStep, rTop, rStart + 2 * rStep + rW, rBottom);
 		resetAllButtonRect.set(rStart + 3 * rStep, rTop, rStart + 3 * rStep + rW, rBottom);
 
-		drawButton(canvas, resetControlsButtonRect, "RESET CTRL", pButtonWarn);
-		drawButton(canvas, resetMahjongButtonRect, "RESET MJ", pButtonWarn);
-		drawButton(canvas, resetTaikoButtonRect, "RESET TAIKO", pButtonWarn);
+		// A reset button is greyed out when its panel is not on screen, so it is
+		// clear that tapping it would have nothing to put back.
+		drawButton(canvas, resetControlsButtonRect, "RESET CTRL",
+			isGroupEditable(GROUP_CONTROLS) ? pButtonWarn : pButtonOff);
+		drawButton(canvas, resetMahjongButtonRect, "RESET MJ",
+			isGroupEditable(GROUP_MAHJONG) ? pButtonWarn : pButtonOff);
+		drawButton(canvas, resetTaikoButtonRect, "RESET TAIKO",
+			isGroupEditable(GROUP_TAIKO) ? pButtonWarn : pButtonOff);
 		drawButton(canvas, resetAllButtonRect, "RESET ALL", pButtonWarn);
 
 		// While editing opacity, show the live percentage on the control being
