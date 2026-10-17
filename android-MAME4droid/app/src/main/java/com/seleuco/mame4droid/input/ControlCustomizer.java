@@ -108,8 +108,10 @@ public class ControlCustomizer {
 	private Rect resizeButtonRect = new Rect();
 	private Rect opacityButtonRect = new Rect();
 	private Rect hideButtonRect = new Rect();
+	private Rect resetButtonRect = new Rect();
 	private Paint pButton;
 	private Paint pButtonOff;
+	private Paint pButtonWarn;
 	private Paint pText;
 	private Paint pValue;
 	private Paint pRect;
@@ -132,6 +134,33 @@ public class ControlCustomizer {
 
 	public void setMAME4droid(MAME4droid value) {
 		mm = value;
+	}
+
+	/**
+	 * Puts every control back to its default position, size, opacity and
+	 * visibility, i.e. drops everything edited in this screen. Nothing is written
+	 * to storage here: the layout is only saved when SAVE is pressed, so leaving
+	 * the customizer without saving restores the previous layout.
+	 */
+	public void resetDefinedControlLayout() {
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+		if (values == null) return;
+
+		for (InputValue iv : values) {
+			// Clears both the committed offset and the temporary one.
+			iv.setOffset(0, 0);
+			iv.setAlpha(-1);
+			iv.setHidden(false);
+			iv.clearScale();
+			if (iv.getType() == TouchController.TYPE_ANALOG_RECT) {
+				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
+			} else if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
+				mm.getInputHandler().getTouchTaiko().setArea(iv.getRect());
+			}
+		}
+
+		mm.getInputView().updateImages();
+		mm.getInputView().invalidate();
 	}
 
 	/**
@@ -572,6 +601,12 @@ public class ControlCustomizer {
 					mm.getInputView().invalidate();
 					return;
 				}
+				if (resetButtonRect.contains(x, y)) {
+					// Immediate, but only in memory: SAVE writes it, leaving the
+					// customizer without saving keeps the stored layout.
+					resetDefinedControlLayout();
+					return;
+				}
 				if (saveButtonRect.contains(x, y)) {
 					mm.showDialog(DialogHelper.DIALOG_FINISH_CUSTOM_LAYOUT);
 					mm.getInputView().invalidate();
@@ -789,6 +824,12 @@ public class ControlCustomizer {
 		pButtonOff.setStyle(Style.FILL);
 		pButtonOff.setAlpha(200);
 
+		// RESET throws the whole layout away, so it gets a warning colour.
+		pButtonWarn = new Paint();
+		pButtonWarn.setColor(Color.rgb(255, 140, 0));
+		pButtonWarn.setStyle(Style.FILL);
+		pButtonWarn.setAlpha(200);
+
 		pText = new Paint();
 		pText.setColor(Color.BLACK);
 		pText.setTextSize(30);
@@ -818,7 +859,12 @@ public class ControlCustomizer {
 
 	/** Draws a button box + centred label, shrinking the text to fit. */
 	private void drawButton(Canvas canvas, Rect rect, String label, boolean active) {
-		canvas.drawRect(rect, active ? pButton : pButtonOff);
+		drawButton(canvas, rect, label, active ? pButton : pButtonOff);
+	}
+
+	/** Same, with an explicit background (used by the destructive RESET button). */
+	private void drawButton(Canvas canvas, Rect rect, String label, Paint background) {
+		canvas.drawRect(rect, background);
 
 		float oldSize = pText.getTextSize();
 		float textWidth = pText.measureText(label);
@@ -867,24 +913,28 @@ public class ControlCustomizer {
 			}
 		}
 
-		// Mode / save buttons on a single row along the top edge so they never
-		// sit on top of the controls being edited.
-		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 6 * BUTTON_MARGIN) / 5);
-		int totalW = btnW * 5 + 4 * BUTTON_MARGIN;
+		// Mode / reset / save buttons on a single row along the top edge so they
+		// never sit on top of the controls being edited.
+		int btnCount = 6;
+		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - (btnCount + 1) * BUTTON_MARGIN) / btnCount);
+		int totalW = btnW * btnCount + (btnCount - 1) * BUTTON_MARGIN;
 		int startX = (canvas.getWidth() - totalW) / 2;
 		int top = BUTTON_MARGIN;
 		int bottom = top + BUTTON_HEIGHT;
+		int step = btnW + BUTTON_MARGIN;
 
 		moveButtonRect.set(startX, top, startX + btnW, bottom);
-		resizeButtonRect.set(startX + (btnW + BUTTON_MARGIN), top, startX + 2 * btnW + BUTTON_MARGIN, bottom);
-		opacityButtonRect.set(startX + 2 * (btnW + BUTTON_MARGIN), top, startX + 3 * btnW + 2 * BUTTON_MARGIN, bottom);
-		hideButtonRect.set(startX + 3 * (btnW + BUTTON_MARGIN), top, startX + 4 * btnW + 3 * BUTTON_MARGIN, bottom);
-		saveButtonRect.set(startX + 4 * (btnW + BUTTON_MARGIN), top, startX + 5 * btnW + 4 * BUTTON_MARGIN, bottom);
+		resizeButtonRect.set(startX + step, top, startX + step + btnW, bottom);
+		opacityButtonRect.set(startX + 2 * step, top, startX + 2 * step + btnW, bottom);
+		hideButtonRect.set(startX + 3 * step, top, startX + 3 * step + btnW, bottom);
+		resetButtonRect.set(startX + 4 * step, top, startX + 4 * step + btnW, bottom);
+		saveButtonRect.set(startX + 5 * step, top, startX + 5 * step + btnW, bottom);
 
 		drawButton(canvas, moveButtonRect, "MOVE", mode == MODE_MOVE);
 		drawButton(canvas, resizeButtonRect, "RESIZE", mode == MODE_RESIZE);
 		drawButton(canvas, opacityButtonRect, "OPACITY", mode == MODE_OPACITY);
 		drawButton(canvas, hideButtonRect, "HIDE", mode == MODE_HIDE);
+		drawButton(canvas, resetButtonRect, "RESET", pButtonWarn);
 		drawButton(canvas, saveButtonRect, "SAVE", true);
 
 		// While editing opacity, show the live percentage on the control being
