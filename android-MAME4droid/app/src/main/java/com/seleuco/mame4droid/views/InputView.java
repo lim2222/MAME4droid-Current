@@ -275,6 +275,10 @@ public class InputView extends ImageView {
 				mm.getInputHandler().getTouchStick().setStickAreaAlpha(alpha);
 			} else if (v.getType() == TouchController.TYPE_TATACON_RECT) {
 				mm.getInputHandler().getTouchTaiko().setAreaAlpha(alpha);
+			} else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) {
+				// Each mahjong button draws itself (press shrinks it), so it only
+				// needs its geometry and opacity refreshed.
+				mm.getInputHandler().getTouchMahjong().updateImage(v);
 			}
 		}
 	}
@@ -368,6 +372,10 @@ public class InputView extends ImageView {
 				} else if (v.getType() == TouchController.TYPE_BUTTON_IMG) {
 					// Select the correct button image (pressed or unpressed).
 					d = btns_images[v.getValue()][mm.getInputHandler().getTouchController().getBtnStates()[v.getValue()]];
+				} else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) {
+					// Mahjong panel: each button draws itself so a press can
+					// shrink it slightly.
+					mm.getInputHandler().getTouchMahjong().draw(canvas, v.getValue());
 				}
 			}
 
@@ -397,6 +405,7 @@ public class InputView extends ImageView {
 					else if (mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_STICK_RECT) canvas.drawRect(r, p2);
 					else if (mm.getPrefsHelper().getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_ANALOG_RECT) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_TATACON_RECT) canvas.drawRect(r, p2);
+					else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) canvas.drawRect(r, p2);
 				}
 			}
 

@@ -74,6 +74,11 @@ public class InputValue {
     // alpha", 0..255 is an explicit value set in the layout customizer.
     private int alpha = -1;
 
+    // Hidden in the layout customizer (HIDE mode). Hidden controls are not drawn
+    // and do not take touch input, but stay visible (dimmed) while the customizer
+    // is open so they can be brought back.
+    private boolean hidden = false;
+
     private int sz_x1;
     private int sz_y1;
     private int sz_x2;
@@ -195,5 +200,14 @@ public class InputValue {
 
     public void setAlpha(int alpha) {
         this.alpha = alpha;
+    }
+
+    /** True when this control was hidden in the layout customizer's HIDE mode. */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }

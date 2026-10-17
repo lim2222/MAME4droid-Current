@@ -89,6 +89,7 @@ public class ControlCustomizer {
 	private static final int MODE_MOVE = 0;
 	private static final int MODE_RESIZE = 1;
 	private static final int MODE_OPACITY = 2;
+	private static final int MODE_HIDE = 3;
 	private int mode = MODE_MOVE;
 
 	// Opacity editing (MODE_OPACITY): one pixel of horizontal drag is one step of
@@ -107,11 +108,13 @@ public class ControlCustomizer {
 	private Rect moveButtonRect = new Rect();
 	private Rect resizeButtonRect = new Rect();
 	private Rect opacityButtonRect = new Rect();
+	private Rect hideButtonRect = new Rect();
 	private Paint pButton;
 	private Paint pButtonOff;
 	private Paint pText;
 	private Paint pValue;
 	private Paint pRect;
+	private Paint pHiddenRect;
 	private boolean paintsInitialized = false;
 
 	// Button dimensions
@@ -146,6 +149,8 @@ public class ControlCustomizer {
 			iv.setOffsetTMP(0, 0);
 			// Drop opacities edited since the last save; the saved ones are re-applied below.
 			iv.setAlpha(-1);
+			// Same for the hidden flags.
+			iv.setHidden(false);
 			if (iv.getType() == TouchController.TYPE_ANALOG_RECT) {
 				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
 			} else if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
@@ -153,6 +158,7 @@ public class ControlCustomizer {
 			}
 		}
 		readDefinedControlLayoutAlpha(values, portrait);
+		readDefinedControlLayoutHidden(values, portrait);
 		mm.getInputView().updateImages();
 	}
 
@@ -179,7 +185,8 @@ public class ControlCustomizer {
 			if ((iv.getType() == TouchController.TYPE_BUTTON_RECT ||
 				iv.getType() == TouchController.TYPE_STICK_IMG ||
 				isTatacon ||
-				iv.getType() == TouchController.TYPE_ANALOG_RECT)
+				iv.getType() == TouchController.TYPE_ANALOG_RECT ||
+				iv.getType() == TouchController.TYPE_MAHJONG_IMG)
 				&& iv.getRect().contains(x, y)) {
 
 				valueMoved = iv;
@@ -199,6 +206,7 @@ public class ControlCustomizer {
 	public void saveDefinedControlLayout() {
 		StringBuilder definedStr = new StringBuilder();
 		StringBuilder alphaStr = new StringBuilder();
+		StringBuilder hiddenStr = new StringBuilder();
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		boolean first = true;
 
@@ -226,15 +234,27 @@ public class ControlCustomizer {
 					.append(iv.getValue()).append(",")
 					.append(iv.getAlpha());
 			}
+
+			// Hidden controls are listed by type,value too. Only the hidden ones
+			// are stored, so an empty list means "everything visible".
+			if (iv.isHidden()) {
+				if (hiddenStr.length() > 0) {
+					hiddenStr.append(",");
+				}
+				hiddenStr.append(iv.getType()).append(",")
+					.append(iv.getValue());
+			}
 		}
 
 		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE) {
 			mm.getPrefsHelper().setDefinedControlLayoutLand(definedStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutAlphaLand(alphaStr.toString());
+			mm.getPrefsHelper().setDefinedControlLayoutHiddenLand(hiddenStr.toString());
 			mm.getPrefsHelper().setTataconScales(false, tataconScaleX, tataconScaleY);
 		} else {
 			mm.getPrefsHelper().setDefinedControlLayoutPortrait(definedStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutAlphaPortrait(alphaStr.toString());
+			mm.getPrefsHelper().setDefinedControlLayoutHiddenPortrait(hiddenStr.toString());
 			mm.getPrefsHelper().setTataconScales(true, tataconScaleX, tataconScaleY);
 		}
 	}
@@ -289,7 +309,39 @@ public class ControlCustomizer {
 			}
 		}
 		readDefinedControlLayoutAlpha(values, portrait);
+		readDefinedControlLayoutHidden(values, portrait);
 		mm.getInputView().updateImages();
+	}
+
+	/**
+	 * Restores the controls hidden with the customizer's HIDE mode. Stored as
+	 * {@code type,value} pairs, separately from the position offsets; an empty /
+	 * missing list means everything is visible.
+	 */
+	private void readDefinedControlLayoutHidden(ArrayList<InputValue> values, boolean portrait) {
+		String hiddenStr = portrait
+			? mm.getPrefsHelper().getDefinedControlLayoutHiddenPortrait()
+			: mm.getPrefsHelper().getDefinedControlLayoutHiddenLand();
+
+		if (hiddenStr == null || hiddenStr.length() == 0) return;
+
+		String[] tokens = hiddenStr.split(",");
+		if (tokens.length == 0 || (tokens.length % 2) != 0) return;
+
+		for (int i = 0; i + 1 < tokens.length; i += 2) {
+			try {
+				int type = Integer.parseInt(tokens[i].trim());
+				int value = Integer.parseInt(tokens[i + 1].trim());
+				for (InputValue iv : values) {
+					if (iv.getType() == type && iv.getValue() == value) {
+						iv.setHidden(true);
+						break;
+					}
+				}
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
@@ -389,6 +441,11 @@ public class ControlCustomizer {
 					mm.getInputView().invalidate();
 					return;
 				}
+				if (hideButtonRect.contains(x, y)) {
+					mode = MODE_HIDE;
+					mm.getInputView().invalidate();
+					return;
+				}
 				if (saveButtonRect.contains(x, y)) {
 					mm.showDialog(DialogHelper.DIALOG_FINISH_CUSTOM_LAYOUT);
 					mm.getInputView().invalidate();
@@ -404,6 +461,17 @@ public class ControlCustomizer {
 					if (drum != null) {
 						initialTataconScaleX = tataconScaleX;
 						initialTataconScaleY = tataconScaleY;
+					}
+				} else if (mode == MODE_HIDE) {
+					// Tap a control to hide it; tap it again to bring it back.
+					// Nothing is dragged in this mode.
+					InputValue target = findMovable(values, x, y, false);
+					if (target == null) target = findMovable(values, x, y, true);
+					valueMoved = null;
+					if (target != null) {
+						setControlHidden(target, !target.isHidden());
+						mm.getInputView().updateImages();
+						mm.getInputView().invalidate();
 					}
 				} else {
 					// Move / opacity mode: buttons keep grab priority over the drum.
@@ -422,6 +490,8 @@ public class ControlCustomizer {
 
 			case MotionEvent.ACTION_MOVE:
 				if (valueMoved == null) break;
+				// HIDE mode only toggles: never drag a control by accident.
+				if (mode == MODE_HIDE) break;
 
 				int pIndex = event.findPointerIndex(activePointerId);
 				if (pIndex == -1) break;
@@ -540,6 +610,40 @@ public class ControlCustomizer {
 	}
 
 	/**
+	 * Hides or shows a control and everything sharing its artwork. Hidden controls
+	 * are not drawn and do not take touches; they stay visible (dimmed) while the
+	 * customizer is open so they can be brought back.
+	 */
+	private void setControlHidden(InputValue iv, boolean hidden) {
+		if (iv == null) return;
+
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+
+		if (iv.getType() == TouchController.TYPE_BUTTON_RECT) {
+			// The artwork is drawn from the matching TYPE_BUTTON_IMG entry.
+			iv.setHidden(hidden);
+			for (InputValue other : values) {
+				if (other.getType() == TouchController.TYPE_BUTTON_IMG && other.getValue() == iv.getValue()) {
+					other.setHidden(hidden);
+					break;
+				}
+			}
+		} else if (iv.getType() == TouchController.TYPE_STICK_IMG ||
+			iv.getType() == TouchController.TYPE_ANALOG_RECT) {
+			// The stick is a single visual unit, so keep every related entry equal.
+			for (InputValue other : values) {
+				if (other.getType() == TouchController.TYPE_STICK_RECT ||
+					other.getType() == TouchController.TYPE_STICK_IMG ||
+					other.getType() == TouchController.TYPE_ANALOG_RECT) {
+					other.setHidden(hidden);
+				}
+			}
+		} else {
+			iv.setHidden(hidden);
+		}
+	}
+
+	/**
 	 * Lazy-load Paint objects to ensure strict memory constraints on the UI thread.
 	 */
 	private void initPaints() {
@@ -573,6 +677,11 @@ public class ControlCustomizer {
 		pRect = new Paint();
 		pRect.setARGB(30, 255, 255, 255);
 		pRect.setStyle(Style.FILL);
+
+		// Hidden controls in HIDE mode.
+		pHiddenRect = new Paint();
+		pHiddenRect.setARGB(70, 255, 0, 0);
+		pHiddenRect.setStyle(Style.FILL);
 
 		paintsInitialized = true;
 	}
@@ -616,30 +725,36 @@ public class ControlCustomizer {
 					draw = true;
 				} else if (type == TouchController.TYPE_TATACON_RECT) {
 					draw = true;
+				} else if (type == TouchController.TYPE_MAHJONG_IMG) {
+					draw = true;
 				}
 
 				if (draw) {
-					canvas.drawRect(r, pRect);
+					// Hidden controls get a red box so they are easy to spot while
+					// the customizer is open.
+					canvas.drawRect(r, v.isHidden() ? pHiddenRect : pRect);
 				}
 			}
 		}
 
 		// Mode / save buttons on a single row along the top edge so they never
 		// sit on top of the controls being edited.
-		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 5 * BUTTON_MARGIN) / 4);
-		int totalW = btnW * 4 + 3 * BUTTON_MARGIN;
+		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 6 * BUTTON_MARGIN) / 5);
+		int totalW = btnW * 5 + 4 * BUTTON_MARGIN;
 		int startX = (canvas.getWidth() - totalW) / 2;
 		int top = BUTTON_MARGIN;
 		int bottom = top + BUTTON_HEIGHT;
 
 		moveButtonRect.set(startX, top, startX + btnW, bottom);
-		resizeButtonRect.set(startX + btnW + BUTTON_MARGIN, top, startX + 2 * btnW + BUTTON_MARGIN, bottom);
+		resizeButtonRect.set(startX + (btnW + BUTTON_MARGIN), top, startX + 2 * btnW + BUTTON_MARGIN, bottom);
 		opacityButtonRect.set(startX + 2 * (btnW + BUTTON_MARGIN), top, startX + 3 * btnW + 2 * BUTTON_MARGIN, bottom);
-		saveButtonRect.set(startX + 3 * (btnW + BUTTON_MARGIN), top, startX + 4 * btnW + 3 * BUTTON_MARGIN, bottom);
+		hideButtonRect.set(startX + 3 * (btnW + BUTTON_MARGIN), top, startX + 4 * btnW + 3 * BUTTON_MARGIN, bottom);
+		saveButtonRect.set(startX + 4 * (btnW + BUTTON_MARGIN), top, startX + 5 * btnW + 4 * BUTTON_MARGIN, bottom);
 
 		drawButton(canvas, moveButtonRect, "MOVE", mode == MODE_MOVE);
 		drawButton(canvas, resizeButtonRect, "RESIZE", mode == MODE_RESIZE);
 		drawButton(canvas, opacityButtonRect, "OPACITY", mode == MODE_OPACITY);
+		drawButton(canvas, hideButtonRect, "HIDE", mode == MODE_HIDE);
 		drawButton(canvas, saveButtonRect, "SAVE", true);
 
 		// While editing opacity, show the live percentage on the control being

@@ -128,6 +128,9 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	// Per-control opacity set in the layout customizer (type,value,alpha triples).
 	final static public String PREF_DEFINED_CONTROL_LAYOUT_ALPHA = "PREF_DEFINED_CONTROL_LAYOUT_ALPHA";
 	final static public String PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA = "PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA";
+	// Controls hidden in the layout customizer (type,value pairs, hidden ones only).
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_HIDDEN = "PREF_DEFINED_CONTROL_LAYOUT_HIDDEN";
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN = "PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN";
 
 	final static public String PREF_DISABLE_RIGHT_STICK = "PREF_DISABLE_RIGHT_STICK";
 	final static public String PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND = "PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND";
@@ -135,6 +138,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	final static public String PREF_ANIMATED_INPUT = "PREF_ANIMATED_INPUT";
 	final static public String PREF_TATACON = "PREF_TATACON";
+	final static public String PREF_MAHJONG = "PREF_MAHJONG";
 	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
 	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
 	final static public String PREF_TATACON_SCALEX_LAND = "PREF_TATACON_SCALEX_LAND";
@@ -497,6 +501,11 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 		return getSharedPreferences().getBoolean(PREF_TATACON, false);
 	}
 
+	/** Mahjong touch panel enabled: a bank of tile / action buttons. */
+	public boolean isMahjong() {
+		return getSharedPreferences().getBoolean(PREF_MAHJONG, false);
+	}
+
 	/**
 	 * Taiko drum size, edited in the "customize layout" screen (move / resize
 	 * modes). X and Y are stored separately so the drum can be stretched.
@@ -763,6 +772,26 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	public void setDefinedControlLayoutAlphaPortrait(String value) {
 		SharedPreferences.Editor editor = getSharedPreferences().edit();
 		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutHiddenLand() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, null);
+	}
+
+	public void setDefinedControlLayoutHiddenLand(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutHiddenPortrait() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, null);
+	}
+
+	public void setDefinedControlLayoutHiddenPortrait(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, value);
 		editor.commit();
 	}
 

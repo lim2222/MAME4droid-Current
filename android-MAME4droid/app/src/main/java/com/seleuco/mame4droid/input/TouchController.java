@@ -79,6 +79,10 @@ public class TouchController implements IController {
 	protected static int[] oldtouches = new int[MAX_FINGERS];
 	protected static boolean[] touchstates = new boolean[MAX_FINGERS];
 
+	// Mahjong panel: which button each pointer is holding, -1 when the pointer is
+	// not on the panel. Needed so a lifted finger releases exactly its own key.
+	protected static int[] mahjongTouches = new int[MAX_FINGERS];
+
 	final public static int TYPE_MAIN_RECT = 1;
 	final public static int TYPE_STICK_RECT = 2;
 	final public static int TYPE_BUTTON_RECT = 3;
@@ -90,6 +94,9 @@ public class TouchController implements IController {
 	// Taiko no Tatsujin drum (tatacon). One entry defines the drum's bounding
 	// box; hit testing is radial and handled by TouchTaiko.
 	final public static int TYPE_TATACON_RECT = 9;
+	// Mahjong panel button. A single entry is both the hit area and the drawn
+	// image (like the drum); value = index into TouchMahjong's button table.
+	final public static int TYPE_MAHJONG_IMG = 10;
 
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
@@ -120,6 +127,8 @@ public class TouchController implements IController {
 		stick_state = old_stick_state = STICK_NONE;
 		for (int i = 0; i < NUM_BUTTONS; i++)
 			btnStates[i] = old_btnStates[i] = BTN_NO_PRESS_STATE;
+		for (int i = 0; i < MAX_FINGERS; i++)
+			mahjongTouches[i] = -1;
 	}
 
 	public void setMAME4droid(MAME4droid value) {
@@ -258,7 +267,18 @@ public class TouchController implements IController {
 					// AABB Collision check against UI layout rects
 					if (iv.getRect().contains(x, y) && isHandledTouchItem(iv)) {
 
-						if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT) {
+						if (iv.getType() == TYPE_MAHJONG_IMG) {
+							// Mahjong panel: every button is a plain keyboard key.
+							handled = true;
+							int mj = iv.getValue();
+							if (mahjongTouches[id] != mj) {
+								if (mahjongTouches[id] != -1)
+									mm.getInputHandler().getTouchMahjong().release(mahjongTouches[id]);
+								mahjongTouches[id] = mj;
+								mm.getInputHandler().getTouchMahjong().press(mj);
+							}
+						}
+						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT) {
 							handled = true;
 
 							switch (actionMasked) {
@@ -321,6 +341,12 @@ public class TouchController implements IController {
 
 		// Reconcile lifting states (Debouncing logic for low-quality digitizers)
 		for (int i = 0; i < touchstates.length; i++) {
+			// A finger that left the panel releases the key it was holding.
+			if (!touchstates[i] && mahjongTouches[i] != -1) {
+				mm.getInputHandler().getTouchMahjong().release(mahjongTouches[i]);
+				mahjongTouches[i] = -1;
+			}
+
 			if (!touchstates[i] && newtouches[i] != 0) {
 				boolean really = true;
 
@@ -404,8 +430,11 @@ public class TouchController implements IController {
 	}
 
 	public Boolean isHandledStick(){
-		// The taiko drum replaces the stick / dpad while it is enabled.
-		if (mm.getPrefsHelper().isTatacon()) return false;
+		// The taiko drum / mahjong panel replace the stick / dpad while enabled.
+		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong()) return false;
+
+		// A stick hidden in the customizer takes no input either.
+		if (isControlHidden(TYPE_STICK_IMG) || isControlHidden(TYPE_ANALOG_RECT)) return false;
 
 		boolean hideStick = (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE ||
 			mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && Emulator.isPortraitFull())
@@ -427,6 +456,13 @@ public class TouchController implements IController {
 		boolean handleStick = isHandledStick();
 		int type = v.getType();
 
+		// A control hidden in the customizer's HIDE mode is not drawn and does not
+		// take touches. While the customizer is open it stays visible (dimmed) so
+		// it can be brought back.
+		if (v.isHidden() && !ControlCustomizer.isEnabled()) {
+			return false;
+		}
+
 		if(type == TouchController.TYPE_ANALOG_RECT ){
 			handle = handleStick && mm.getPrefsHelper().getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD;
 		}
@@ -437,11 +473,23 @@ public class TouchController implements IController {
 			// Only shown while the taiko drum mode is enabled.
 			handle = mm.getPrefsHelper().isTatacon();
 		}
+		else if(type == TouchController.TYPE_MAHJONG_IMG) {
+			// Only shown while the mahjong panel is enabled.
+			handle = mm.getPrefsHelper().isMahjong();
+		}
 		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT ){
 
 			// Taiko mode: the drum replaces the action buttons, only coin /
 			// start / option / exit are kept.
 			if(mm.getPrefsHelper().isTatacon()
+				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
+				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
+				return false;
+			}
+
+			// Mahjong mode: the panel replaces the action buttons and the stick,
+			// only coin / start / option / exit are kept.
+			if(mm.getPrefsHelper().isMahjong()
 				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
 				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
 				return false;
@@ -498,6 +546,22 @@ public class TouchController implements IController {
 			}
 		}
 		return handle;
+	}
+
+	/** Drops the per-pointer mahjong ownership (used when inputs are reset). */
+	public void clearMahjongTouches() {
+		for (int i = 0; i < MAX_FINGERS; i++)
+			mahjongTouches[i] = -1;
+	}
+
+	/** True when any loaded control of the given type is hidden in the customizer. */
+	public boolean isControlHidden(int type) {
+		if (values == null) return false;
+		for (int i = 0; i < values.size(); i++) {
+			InputValue v = values.get(i);
+			if (v.getType() == type && v.isHidden()) return true;
+		}
+		return false;
 	}
 
 	/**
@@ -662,6 +726,12 @@ public class TouchController implements IController {
 		} catch (IOException e) {
 			Log.e(TAG, "Failed to parse on-screen controller layout file", e);
 		}
+
+		// The mahjong panel is generated (not part of the raw layout files) so
+		// that it can adapt to whatever main rect the orientation uses.
+		if (mm.getPrefsHelper().isMahjong()) {
+			mm.getInputHandler().getTouchMahjong().buildDefaultLayout(values);
+		}
 	}
 
 	// Haptics engine : the vibrator is resolved once, the vibrate binder call runs on
@@ -677,6 +747,11 @@ public class TouchController implements IController {
 	private long lastVibrateTime = 0L;
 
 	protected void vibrate() {
+		fireHaptic(1.0f);
+	}
+
+	/** Full strength haptic tick, used by controls that are not action buttons. */
+	void fireHaptic() {
 		fireHaptic(1.0f);
 	}
 

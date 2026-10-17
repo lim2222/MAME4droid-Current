@@ -166,6 +166,10 @@
 			android:title="@string/pref_tatacon_title" android:summary="@string/pref_tatacon_summary"
 			android:defaultValue="false" />
 
+		<CheckBoxPreference android:key="PREF_MAHJONG"
+			android:title="@string/pref_mahjong_title" android:summary="@string/pref_mahjong_summary"
+			android:defaultValue="false" />
+
 		<ListPreference
 			android:entries="@array/pref_analog_vibrate_options"
 			android:title="@string/pref_analog_vibrate_title"
