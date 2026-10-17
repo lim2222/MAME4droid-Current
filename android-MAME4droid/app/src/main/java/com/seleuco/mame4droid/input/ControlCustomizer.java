@@ -108,7 +108,10 @@ public class ControlCustomizer {
 	private Rect resizeButtonRect = new Rect();
 	private Rect opacityButtonRect = new Rect();
 	private Rect hideButtonRect = new Rect();
-	private Rect resetButtonRect = new Rect();
+	private Rect resetControlsButtonRect = new Rect();
+	private Rect resetMahjongButtonRect = new Rect();
+	private Rect resetTaikoButtonRect = new Rect();
+	private Rect resetAllButtonRect = new Rect();
 	private Paint pButton;
 	private Paint pButtonOff;
 	private Paint pButtonWarn;
@@ -136,17 +139,38 @@ public class ControlCustomizer {
 		mm = value;
 	}
 
+	/** Groups the reset buttons work on. */
+	public static final int GROUP_CONTROLS = 0;
+	public static final int GROUP_MAHJONG = 1;
+	public static final int GROUP_TAIKO = 2;
+	public static final int GROUP_ALL = 3;
+
+	/** True when this control belongs to the group a reset button clears. */
+	private static boolean isResetGroup(int group, InputValue iv) {
+		int type = iv.getType();
+		if (group == GROUP_ALL) return true;
+		if (group == GROUP_MAHJONG) return type == TouchController.TYPE_MAHJONG_IMG;
+		if (group == GROUP_TAIKO) return type == TouchController.TYPE_TATACON_RECT;
+		// GROUP_CONTROLS: the stick / dpad and the buttons with their artwork.
+		return type != TouchController.TYPE_MAHJONG_IMG
+			&& type != TouchController.TYPE_TATACON_RECT
+			&& type != TouchController.TYPE_MAIN_RECT;
+	}
+
 	/**
-	 * Puts every control back to its default position, size, opacity and
-	 * visibility, i.e. drops everything edited in this screen. Nothing is written
-	 * to storage here: the layout is only saved when SAVE is pressed, so leaving
-	 * the customizer without saving restores the previous layout.
+	 * Puts the controls of one group back to their default position, size,
+	 * opacity and visibility, leaving the panels of the other groups alone.
+	 * Nothing is written to storage here: the layout is only saved when SAVE is
+	 * pressed, so leaving the customizer without saving restores the previous
+	 * layout.
 	 */
-	public void resetDefinedControlLayout() {
+	public void resetDefinedControlLayout(int group) {
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		if (values == null) return;
 
 		for (InputValue iv : values) {
+			if (!isResetGroup(group, iv)) continue;
+
 			// Clears both the committed offset and the temporary one.
 			iv.setOffset(0, 0);
 			iv.setAlpha(-1);
@@ -601,10 +625,22 @@ public class ControlCustomizer {
 					mm.getInputView().invalidate();
 					return;
 				}
-				if (resetButtonRect.contains(x, y)) {
+				if (resetControlsButtonRect.contains(x, y)) {
 					// Immediate, but only in memory: SAVE writes it, leaving the
 					// customizer without saving keeps the stored layout.
-					resetDefinedControlLayout();
+					resetDefinedControlLayout(GROUP_CONTROLS);
+					return;
+				}
+				if (resetMahjongButtonRect.contains(x, y)) {
+					resetDefinedControlLayout(GROUP_MAHJONG);
+					return;
+				}
+				if (resetTaikoButtonRect.contains(x, y)) {
+					resetDefinedControlLayout(GROUP_TAIKO);
+					return;
+				}
+				if (resetAllButtonRect.contains(x, y)) {
+					resetDefinedControlLayout(GROUP_ALL);
 					return;
 				}
 				if (saveButtonRect.contains(x, y)) {
@@ -913,29 +949,42 @@ public class ControlCustomizer {
 			}
 		}
 
-		// Mode / reset / save buttons on a single row along the top edge so they
-		// never sit on top of the controls being edited.
-		int btnCount = 6;
-		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - (btnCount + 1) * BUTTON_MARGIN) / btnCount);
-		int totalW = btnW * btnCount + (btnCount - 1) * BUTTON_MARGIN;
-		int startX = (canvas.getWidth() - totalW) / 2;
+		// Edit modes and SAVE on the first row, one reset per panel on the second.
+		// Both hug the top edge so they never sit on the controls being edited.
 		int top = BUTTON_MARGIN;
 		int bottom = top + BUTTON_HEIGHT;
+
+		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 6 * BUTTON_MARGIN) / 5);
 		int step = btnW + BUTTON_MARGIN;
+		int startX = (canvas.getWidth() - (btnW * 5 + 4 * BUTTON_MARGIN)) / 2;
 
 		moveButtonRect.set(startX, top, startX + btnW, bottom);
 		resizeButtonRect.set(startX + step, top, startX + step + btnW, bottom);
 		opacityButtonRect.set(startX + 2 * step, top, startX + 2 * step + btnW, bottom);
 		hideButtonRect.set(startX + 3 * step, top, startX + 3 * step + btnW, bottom);
-		resetButtonRect.set(startX + 4 * step, top, startX + 4 * step + btnW, bottom);
-		saveButtonRect.set(startX + 5 * step, top, startX + 5 * step + btnW, bottom);
+		saveButtonRect.set(startX + 4 * step, top, startX + 4 * step + btnW, bottom);
 
 		drawButton(canvas, moveButtonRect, "MOVE", mode == MODE_MOVE);
 		drawButton(canvas, resizeButtonRect, "RESIZE", mode == MODE_RESIZE);
 		drawButton(canvas, opacityButtonRect, "OPACITY", mode == MODE_OPACITY);
 		drawButton(canvas, hideButtonRect, "HIDE", mode == MODE_HIDE);
-		drawButton(canvas, resetButtonRect, "RESET", pButtonWarn);
 		drawButton(canvas, saveButtonRect, "SAVE", true);
+
+		int rTop = bottom + BUTTON_MARGIN;
+		int rBottom = rTop + BUTTON_HEIGHT;
+		int rW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - 5 * BUTTON_MARGIN) / 4);
+		int rStep = rW + BUTTON_MARGIN;
+		int rStart = (canvas.getWidth() - (rW * 4 + 3 * BUTTON_MARGIN)) / 2;
+
+		resetControlsButtonRect.set(rStart, rTop, rStart + rW, rBottom);
+		resetMahjongButtonRect.set(rStart + rStep, rTop, rStart + rStep + rW, rBottom);
+		resetTaikoButtonRect.set(rStart + 2 * rStep, rTop, rStart + 2 * rStep + rW, rBottom);
+		resetAllButtonRect.set(rStart + 3 * rStep, rTop, rStart + 3 * rStep + rW, rBottom);
+
+		drawButton(canvas, resetControlsButtonRect, "RESET CTRL", pButtonWarn);
+		drawButton(canvas, resetMahjongButtonRect, "RESET MJ", pButtonWarn);
+		drawButton(canvas, resetTaikoButtonRect, "RESET TAIKO", pButtonWarn);
+		drawButton(canvas, resetAllButtonRect, "RESET ALL", pButtonWarn);
 
 		// While editing opacity, show the live percentage on the control being
 		// dragged so the value is not guesswork.
