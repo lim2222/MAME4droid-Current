@@ -208,12 +208,17 @@ public class TouchMahjong implements IController {
      */
     public void reset() {
         clearPointerOwnership();
+        boolean dirty = false;
         for (int i = 0; i < BUTTON_COUNT; i++) {
             if (pressed[i] || releaseScheduled[i]) {
                 pressed[i] = false;
                 releaseScheduled[i] = false;
                 sendKey(i, false);
+                dirty = true;
             }
+        }
+        if (dirty && mm != null && mm.getInputView() != null) {
+            mm.getInputView().postInvalidate();
         }
     }
 
@@ -227,6 +232,7 @@ public class TouchMahjong implements IController {
         releaseScheduled[index] = false;
 
         sendKey(index, true);
+        repaint(index);
 
         TouchController tc = touchController();
         if (tc != null) tc.fireHaptic();
@@ -241,6 +247,7 @@ public class TouchMahjong implements IController {
         if (elapsed >= MIN_HOLD_MS) {
             pressed[index] = false;
             sendKey(index, false);
+            repaint(index);
             return;
         }
 
@@ -256,6 +263,7 @@ public class TouchMahjong implements IController {
                 if (!pressed[idx]) return;
                 pressed[idx] = false;
                 sendKey(idx, false);
+                repaint(idx);
             }
         }, MIN_HOLD_MS - elapsed);
     }
@@ -275,6 +283,24 @@ public class TouchMahjong implements IController {
     }
 
     /* ---- drawing --------------------------------------------------------- */
+
+    /**
+     * Repaints a single button so its pressed (shrunk) state shows up at once.
+     *
+     * Nothing else repaints the panel: the controls that own a shared drawable
+     * get their repaint from TouchController.handleImageStates(), which only
+     * knows about the stick and the regular buttons, and a short tap flips the
+     * state back from the delayed release runnable where handleImageStates has
+     * already run. postInvalidate() is used because of that runnable, it is
+     * also safe when a reset comes from another thread.
+     */
+    private void repaint(int index) {
+        if (index < 0 || index >= BUTTON_COUNT) return;
+        if (mm == null || mm.getInputView() == null) return;
+        Rect r = rects[index];
+        if (r == null) return;
+        mm.getInputView().postInvalidate(r.left, r.top, r.right, r.bottom);
+    }
 
     /**
      * Stores the resolved geometry / opacity of a mahjong control. Called from
