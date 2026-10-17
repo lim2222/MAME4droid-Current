@@ -131,6 +131,10 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	// Controls hidden in the layout customizer (type,value pairs, hidden ones only).
 	final static public String PREF_DEFINED_CONTROL_LAYOUT_HIDDEN = "PREF_DEFINED_CONTROL_LAYOUT_HIDDEN";
 	final static public String PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN = "PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN";
+	// Per-control sizes set in the layout customizer's RESIZE mode
+	// (type,value,scaleX,scaleY groups, only the resized controls are stored).
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_SCALE = "PREF_DEFINED_CONTROL_LAYOUT_SCALE";
+	final static public String PREF_DEFINED_CONTROL_LAYOUT_P_SCALE = "PREF_DEFINED_CONTROL_LAYOUT_P_SCALE";
 
 	final static public String PREF_DISABLE_RIGHT_STICK = "PREF_DISABLE_RIGHT_STICK";
 	final static public String PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND = "PREF_CONTROLLER_DISABLE_BUTTONS_IN_FRONTEND";
@@ -792,6 +796,26 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	public void setDefinedControlLayoutHiddenPortrait(String value) {
 		SharedPreferences.Editor editor = getSharedPreferences().edit();
 		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutScaleLand() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_SCALE, null);
+	}
+
+	public void setDefinedControlLayoutScaleLand(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_SCALE, value);
+		editor.commit();
+	}
+
+	public String getDefinedControlLayoutScalePortrait() {
+		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE, null);
+	}
+
+	public void setDefinedControlLayoutScalePortrait(String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE, value);
 		editor.commit();
 	}
 

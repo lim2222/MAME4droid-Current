@@ -623,15 +623,8 @@ public class TouchController implements IController {
 			case 5: sz2 = 30; break;
 		}
 
-		// Taiko drum: X / Y scale factors edited in the customizer, grown /
-		// shrunk symmetrically around the control centre.
-		float taikoScaleX = mm.getPrefsHelper().getTataconScaleX(portrait);
-		float taikoScaleY = mm.getPrefsHelper().getTataconScaleY(portrait);
-		boolean tataconScaled = Math.abs(taikoScaleX - 1.0f) > 0.0001f
-			|| Math.abs(taikoScaleY - 1.0f) > 0.0001f;
-
 		if (values == null) return;
-		if (!tataconScaled && (sz == 0 && sz2 == 0)) return;
+		if (sz == 0 && sz2 == 0) return;
 
 		for (int j = 0; j < values.size(); j++) {
 			InputValue iv = values.get(j);
@@ -658,17 +651,6 @@ public class TouchController implements IController {
 			} else if (iv.getType() == TYPE_ANALOG_RECT) {
 				iv.setSize(0, 0, sz2, sz2);
 				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
-			} else if (iv.getType() == TYPE_TATACON_RECT) {
-				// setSize() values are layout units (multiplied by dx / dy later),
-				// so derive the delta from the original layout width / height.
-				int baseW = iv.getOrigRect().width();
-				int baseH = iv.getOrigRect().height();
-				int dX = (int) (baseW * (taikoScaleX - 1.0f));
-				int dY = (int) (baseH * (taikoScaleY - 1.0f));
-				if ((dX & 1) != 0) dX++; // keep the growth symmetric
-				if ((dY & 1) != 0) dY++;
-				iv.setSize(-dX / 2, -dY / 2, dX / 2, dY / 2);
-				mm.getInputHandler().getTouchTaiko().setArea(iv.getRect());
 			}
 		}
 	}

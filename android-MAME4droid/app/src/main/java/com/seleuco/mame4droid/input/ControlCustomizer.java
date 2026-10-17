@@ -79,11 +79,10 @@ public class ControlCustomizer {
 
 	private InputValue valueMoved = null;
 
-	// Taiko drum size (X / Y), edited in resize mode.
-	private float tataconScaleX = 1f;
-	private float tataconScaleY = 1f;
-	private float initialTataconScaleX = 1f;
-	private float initialTataconScaleY = 1f;
+	// Scale of the control being resized, captured when the drag starts so the
+	// gesture never jumps.
+	private float initialScaleX = 1f;
+	private float initialScaleY = 1f;
 
 	// Edit modes. Only one is active at a time.
 	private static final int MODE_MOVE = 0;
@@ -141,8 +140,6 @@ public class ControlCustomizer {
 	 */
 	public void discardDefinedControlLayout() {
 		boolean portrait = mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT;
-		tataconScaleX = mm.getPrefsHelper().getTataconScaleX(portrait);
-		tataconScaleY = mm.getPrefsHelper().getTataconScaleY(portrait);
 
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		for (InputValue iv : values) {
@@ -151,27 +148,77 @@ public class ControlCustomizer {
 			iv.setAlpha(-1);
 			// Same for the hidden flags.
 			iv.setHidden(false);
+			// And for the sizes edited in resize mode.
+			iv.clearScale();
 			if (iv.getType() == TouchController.TYPE_ANALOG_RECT) {
 				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
 			} else if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
-				applyTataconScale(iv, tataconScaleX, tataconScaleY);
+				mm.getInputHandler().getTouchTaiko().setArea(iv.getRect());
 			}
 		}
 		readDefinedControlLayoutAlpha(values, portrait);
 		readDefinedControlLayoutHidden(values, portrait);
+		readDefinedControlLayoutScale(values, portrait);
 		mm.getInputView().updateImages();
 	}
 
-	/** Apply X / Y scale factors to the taiko drum (layout-unit symmetric growth). */
-	private void applyTataconScale(InputValue iv, float scaleX, float scaleY) {
-		int baseW = iv.getOrigRect().width();
-		int baseH = iv.getOrigRect().height();
-		int dX = (int) (baseW * (scaleX - 1.0f));
-		int dY = (int) (baseH * (scaleY - 1.0f));
-		if ((dX & 1) != 0) dX++; // keep the growth symmetric
-		if ((dY & 1) != 0) dY++;
-		iv.setSize(-dX / 2, -dY / 2, dX / 2, dY / 2);
-		mm.getInputHandler().getTouchTaiko().setArea(iv.getRect());
+	/**
+	 * Applies X / Y scale factors to a control, growing it around the centre of the
+	 * group it belongs to: a button scales together with the image drawn for it, and
+	 * every piece of the stick scales around the same point, so the group keeps its
+	 * shape instead of drifting apart.
+	 */
+	private void applyScale(InputValue target, float scaleX, float scaleY) {
+		if (target == null) return;
+
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+
+		// Common centre (in layout units) of the group.
+		float cx = 0;
+		float cy = 0;
+		int n = 0;
+		for (InputValue iv : values) {
+			if (!isSameControlGroup(target, iv)) continue;
+			cx += iv.getBaseCenterX();
+			cy += iv.getBaseCenterY();
+			n++;
+		}
+		if (n == 0) return;
+		cx /= n;
+		cy /= n;
+
+		for (InputValue iv : values) {
+			if (!isSameControlGroup(target, iv)) continue;
+			iv.setScale(scaleX, scaleY);
+			iv.setScaleAnchor(Math.round(cx), Math.round(cy));
+			if (iv.getType() == TouchController.TYPE_ANALOG_RECT) {
+				mm.getInputHandler().getTouchStick().setStickArea(iv.getRect());
+			}
+		}
+		if (target.getType() == TouchController.TYPE_TATACON_RECT) {
+			mm.getInputHandler().getTouchTaiko().setArea(target.getRect());
+		}
+	}
+
+	/**
+	 * Whether two entries are pieces of the same visual unit: a button and the image
+	 * drawn for it, or the rects and images making up a stick. Everything else is
+	 * identified by its own type / value.
+	 */
+	private static boolean isSameControlGroup(InputValue a, InputValue b) {
+		int typeA = a.getType();
+		int typeB = b.getType();
+
+		if (typeA == TouchController.TYPE_BUTTON_RECT || typeA == TouchController.TYPE_BUTTON_IMG) {
+			return (typeB == TouchController.TYPE_BUTTON_RECT || typeB == TouchController.TYPE_BUTTON_IMG)
+				&& a.getValue() == b.getValue();
+		}
+		if (typeA == TouchController.TYPE_STICK_IMG || typeA == TouchController.TYPE_STICK_RECT ||
+			typeA == TouchController.TYPE_ANALOG_RECT) {
+			return typeB == TouchController.TYPE_STICK_RECT || typeB == TouchController.TYPE_STICK_IMG ||
+				typeB == TouchController.TYPE_ANALOG_RECT;
+		}
+		return typeA == typeB && a.getValue() == b.getValue();
 	}
 
 	/**
@@ -207,8 +254,12 @@ public class ControlCustomizer {
 		StringBuilder definedStr = new StringBuilder();
 		StringBuilder alphaStr = new StringBuilder();
 		StringBuilder hiddenStr = new StringBuilder();
+		StringBuilder scaleStr = new StringBuilder();
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 		boolean first = true;
+		// Legacy drum size preference, kept in sync for older versions.
+		float drumScaleX = 1f;
+		float drumScaleY = 1f;
 
 		for (InputValue iv : values) {
 			// Commit temporary offset changes to permanent offsets
@@ -244,18 +295,35 @@ public class ControlCustomizer {
 				hiddenStr.append(iv.getType()).append(",")
 					.append(iv.getValue());
 			}
+
+			// Same idea for the sizes edited in resize mode, as type,value,X,Y groups.
+			if (iv.getScaleX() != 1f || iv.getScaleY() != 1f) {
+				if (scaleStr.length() > 0) {
+					scaleStr.append(",");
+				}
+				scaleStr.append(iv.getType()).append(",")
+					.append(iv.getValue()).append(",")
+					.append(iv.getScaleX()).append(",")
+					.append(iv.getScaleY());
+			}
+			if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
+				drumScaleX = iv.getScaleX();
+				drumScaleY = iv.getScaleY();
+			}
 		}
 
 		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE) {
 			mm.getPrefsHelper().setDefinedControlLayoutLand(definedStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutAlphaLand(alphaStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutHiddenLand(hiddenStr.toString());
-			mm.getPrefsHelper().setTataconScales(false, tataconScaleX, tataconScaleY);
+			mm.getPrefsHelper().setDefinedControlLayoutScaleLand(scaleStr.toString());
+			mm.getPrefsHelper().setTataconScales(false, drumScaleX, drumScaleY);
 		} else {
 			mm.getPrefsHelper().setDefinedControlLayoutPortrait(definedStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutAlphaPortrait(alphaStr.toString());
 			mm.getPrefsHelper().setDefinedControlLayoutHiddenPortrait(hiddenStr.toString());
-			mm.getPrefsHelper().setTataconScales(true, tataconScaleX, tataconScaleY);
+			mm.getPrefsHelper().setDefinedControlLayoutScalePortrait(scaleStr.toString());
+			mm.getPrefsHelper().setTataconScales(true, drumScaleX, drumScaleY);
 		}
 	}
 
@@ -264,9 +332,6 @@ public class ControlCustomizer {
 	 */
 	public void readDefinedControlLayout() {
 		boolean portrait = mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT;
-		// Keep the in-memory drum scale in sync with what was persisted.
-		tataconScaleX = mm.getPrefsHelper().getTataconScaleX(portrait);
-		tataconScaleY = mm.getPrefsHelper().getTataconScaleY(portrait);
 
 		// In non-full portrait only the taiko drum honours its custom position /
 		// size; the classic controls keep their fixed layout to prevent clipping.
@@ -310,6 +375,7 @@ public class ControlCustomizer {
 		}
 		readDefinedControlLayoutAlpha(values, portrait);
 		readDefinedControlLayoutHidden(values, portrait);
+		readDefinedControlLayoutScale(values, portrait);
 		mm.getInputView().updateImages();
 	}
 
@@ -340,6 +406,66 @@ public class ControlCustomizer {
 				}
 			} catch (NumberFormatException e) {
 				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * Restores the sizes edited with the customizer's RESIZE mode. Stored as
+	 * {@code type,value,scaleX,scaleY} groups, separately from the offsets, and
+	 * only for the controls that were actually resized.
+	 */
+	private void readDefinedControlLayoutScale(ArrayList<InputValue> values, boolean portrait) {
+		// In non-full portrait only the taiko drum honours its custom size; the
+		// classic controls keep their fixed layout to prevent clipping.
+		boolean portraitNonFull = portrait && !Emulator.isPortraitFull();
+
+		String scaleStr = portrait
+			? mm.getPrefsHelper().getDefinedControlLayoutScalePortrait()
+			: mm.getPrefsHelper().getDefinedControlLayoutScaleLand();
+
+		boolean drumLoaded = false;
+
+		if (scaleStr != null && scaleStr.length() > 0) {
+			String[] tokens = scaleStr.split(",");
+
+			// Failsafe: Ensure data stream is intact (Type, Value, X, Y chunks)
+			if (tokens.length % 4 == 0) {
+				for (int i = 0; i + 3 < tokens.length; i += 4) {
+					try {
+						int type = Integer.parseInt(tokens[i].trim());
+						int value = Integer.parseInt(tokens[i + 1].trim());
+						float scaleX = clampScale(Float.parseFloat(tokens[i + 2].trim()));
+						float scaleY = clampScale(Float.parseFloat(tokens[i + 3].trim()));
+
+						if (portraitNonFull && type != TouchController.TYPE_TATACON_RECT) continue;
+
+						for (InputValue iv : values) {
+							if (iv.getType() == type && iv.getValue() == value) {
+								applyScale(iv, scaleX, scaleY);
+								if (type == TouchController.TYPE_TATACON_RECT) drumLoaded = true;
+								break;
+							}
+						}
+					} catch (NumberFormatException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+
+		// Older versions kept the drum size in its own preference: honour it when
+		// nothing newer was stored for the drum.
+		if (!drumLoaded) {
+			float drumScaleX = mm.getPrefsHelper().getTataconScaleX(portrait);
+			float drumScaleY = mm.getPrefsHelper().getTataconScaleY(portrait);
+			if (drumScaleX != 1f || drumScaleY != 1f) {
+				for (InputValue iv : values) {
+					if (iv.getType() == TouchController.TYPE_TATACON_RECT) {
+						applyScale(iv, drumScaleX, drumScaleY);
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -455,12 +581,13 @@ public class ControlCustomizer {
 				ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 
 				if (mode == MODE_RESIZE) {
-					// Resize mode only affects the taiko drum (its size is the one
-					// that is persisted). Horizontal drag = X size, vertical = Y.
-					InputValue drum = findMovable(values, x, y, true);
-					if (drum != null) {
-						initialTataconScaleX = tataconScaleX;
-						initialTataconScaleY = tataconScaleY;
+					// Any control can be resized: horizontal drag = width, vertical =
+					// height. Small controls keep grab priority over the taiko drum.
+					InputValue target = findMovable(values, x, y, false);
+					if (target == null) target = findMovable(values, x, y, true);
+					if (target != null) {
+						initialScaleX = target.getScaleX();
+						initialScaleY = target.getScaleY();
 					}
 				} else if (mode == MODE_HIDE) {
 					// Tap a control to hide it; tap it again to bring it back.
@@ -502,17 +629,18 @@ public class ControlCustomizer {
 				int deltaX = currX - initialTouchX;
 				int deltaY = currY - initialTouchY;
 
-				if (mode == MODE_RESIZE && valueMoved.getType() == TouchController.TYPE_TATACON_RECT) {
-					// One layout unit maps to dx / dy screen pixels.
+				if (mode == MODE_RESIZE) {
+					// One layout unit maps to dx / dy screen pixels. Dragging by the
+					// control's own width / height doubles its size.
 					TouchController tc = mm.getInputHandler().getTouchController();
 					float baseWpx = valueMoved.getOrigRect().width() * tc.dx;
 					float baseHpx = valueMoved.getOrigRect().height() * tc.dy;
 					if (baseWpx < 1f) baseWpx = 1f;
 					if (baseHpx < 1f) baseHpx = 1f;
 
-					tataconScaleX = clampTataconScale(initialTataconScaleX + deltaX / baseWpx);
-					tataconScaleY = clampTataconScale(initialTataconScaleY + deltaY / baseHpx);
-					applyTataconScale(valueMoved, tataconScaleX, tataconScaleY);
+					applyScale(valueMoved,
+						clampScale(initialScaleX + deltaX / baseWpx),
+						clampScale(initialScaleY + deltaY / baseHpx));
 					mm.getInputView().updateImages();
 					mm.getInputView().invalidate();
 					break;
@@ -560,8 +688,10 @@ public class ControlCustomizer {
 		}
 	}
 
-	private static float clampTataconScale(float value) {
-		if (value < 0.2f) return 0.2f;
+	/** Keeps a resized control within a sane range (5% .. 2000% of its base size). */
+	private static float clampScale(float value) {
+		// Also catches NaN from a corrupted preference.
+		if (!(value >= 0.2f)) return 0.2f;
 		if (value > 20.0f) return 20.0f;
 		return value;
 	}
@@ -764,6 +894,13 @@ public class ControlCustomizer {
 			int percent = Math.round(draggingAlpha * 100f / 255f);
 			float textY = r.centerY() - ((pValue.descent() + pValue.ascent()) / 2);
 			canvas.drawText(percent + "%", r.centerX(), textY, pValue);
+		} else if (mode == MODE_RESIZE && valueMoved != null) {
+			// Same idea for the size: X and Y percentages, relative to the base size.
+			Rect r = valueMoved.getRect();
+			int percentX = Math.round(valueMoved.getScaleX() * 100f);
+			int percentY = Math.round(valueMoved.getScaleY() * 100f);
+			float textY = r.centerY() - ((pValue.descent() + pValue.ascent()) / 2);
+			canvas.drawText(percentX + "% x " + percentY + "%", r.centerX(), textY, pValue);
 		}
 	}
 }

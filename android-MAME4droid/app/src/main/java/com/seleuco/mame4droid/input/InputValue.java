@@ -79,6 +79,16 @@ public class InputValue {
     // is open so they can be brought back.
     private boolean hidden = false;
 
+    // Size scale set in the layout customizer's RESIZE mode. The factor is applied
+    // on top of the base rectangle (original size plus the size presets) and around
+    // a common anchor, so a group of related controls (a button and its artwork, or
+    // every piece of the stick) keeps its shape and stays proportional on screens of
+    // any size. An anchor of -1 means "grow around the control's own centre".
+    private float scaleX = 1f;
+    private float scaleY = 1f;
+    private int anchorX = -1;
+    private int anchorY = -1;
+
     private int sz_x1;
     private int sz_y1;
     private int sz_x2;
@@ -128,6 +138,48 @@ public class InputValue {
         rect = null;
     }
 
+    /** Horizontal size scale set in the customizer's RESIZE mode, 1 = untouched. */
+    public float getScaleX() {
+        return scaleX;
+    }
+
+    /** Vertical size scale set in the customizer's RESIZE mode, 1 = untouched. */
+    public float getScaleY() {
+        return scaleY;
+    }
+
+    public void setScale(float scaleX, float scaleY) {
+        this.scaleX = scaleX;
+        this.scaleY = scaleY;
+        rect = null;
+    }
+
+    /** Point (in layout units) the control is scaled around. */
+    public void setScaleAnchor(int anchorX, int anchorY) {
+        this.anchorX = anchorX;
+        this.anchorY = anchorY;
+        rect = null;
+    }
+
+    /** Drops any RESIZE-mode scaling, restoring the base size. */
+    public void clearScale() {
+        scaleX = 1f;
+        scaleY = 1f;
+        anchorX = -1;
+        anchorY = -1;
+        rect = null;
+    }
+
+    /** Horizontal centre of the base rectangle, in layout units. */
+    public float getBaseCenterX() {
+        return (o_x1 + sz_x1 + o_x2 + sz_x2) / 2f;
+    }
+
+    /** Vertical centre of the base rectangle, in layout units. */
+    public float getBaseCenterY() {
+        return (o_y1 + sz_y1 + o_y2 + sz_y2) / 2f;
+    }
+
     public void setOffset(int xoff, int yoff) {
         this.xoff = xoff;
         this.yoff = yoff;
@@ -151,11 +203,27 @@ public class InputValue {
 
     public Rect getRect() {
         if (rect == null) {
+            // Base rectangle: original size plus the global buttons / stick size preset.
+            float bx1 = o_x1 + sz_x1;
+            float by1 = o_y1 + sz_y1;
+            float bx2 = o_x2 + sz_x2;
+            float by2 = o_y2 + sz_y2;
+
+            // RESIZE-mode scale, grown around the anchor (own centre when unset).
+            if (scaleX != 1f || scaleY != 1f) {
+                float cx = anchorX >= 0 ? anchorX : (bx1 + bx2) / 2f;
+                float cy = anchorY >= 0 ? anchorY : (by1 + by2) / 2f;
+                bx1 = cx + (bx1 - cx) * scaleX;
+                by1 = cy + (by1 - cy) * scaleY;
+                bx2 = cx + (bx2 - cx) * scaleX;
+                by2 = cy + (by2 - cy) * scaleY;
+            }
+
             rect =
-                    new Rect((int) (o_x1 * dx) + (int) (ax * 1) + xoff + xoff_tmp + (int) (sz_x1 * dx),
-                            (int) (o_y1 * dy) + (int) (ay * 1) + yoff + yoff_tmp + (int) (sz_y1 * dy),
-                            (int) (o_x2 * dx) + (int) (ax * 1) + xoff + xoff_tmp + (int) (sz_x2 * dx),
-                            (int) (o_y2 * dy) + (int) (ay * 1) + yoff + yoff_tmp + (int) (sz_y2 * dy)
+                    new Rect((int) (bx1 * dx) + ax + xoff + xoff_tmp,
+                            (int) (by1 * dy) + ay + yoff + yoff_tmp,
+                            (int) (bx2 * dx) + ax + xoff + xoff_tmp,
+                            (int) (by2 * dy) + ay + yoff + yoff_tmp
                     );
         }
         return rect;
