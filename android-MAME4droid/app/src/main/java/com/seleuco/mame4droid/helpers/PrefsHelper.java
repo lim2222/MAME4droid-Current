@@ -500,9 +500,13 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 		return getSharedPreferences().getBoolean(PREF_ANIMATED_INPUT, true);
 	}
 
-	/** Taiko drum (tatacon) touch control enabled. */
+	/**
+	 * Taiko drum (tatacon) touch control enabled. The drum and the mahjong panel
+	 * replace the same controls, so only one of them can be on: if both have been
+	 * stored the mahjong panel wins and the drum stays off.
+	 */
 	public boolean isTatacon() {
-		return getSharedPreferences().getBoolean(PREF_TATACON, false);
+		return getSharedPreferences().getBoolean(PREF_TATACON, false) && !isMahjong();
 	}
 
 	/** Mahjong touch panel enabled: a bank of tile / action buttons. */

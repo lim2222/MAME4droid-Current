@@ -53,6 +53,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -109,6 +110,10 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 	protected ListPreference mPrefNetplayIpProto;
 
 	protected ListPreference mPrefLanguage;
+
+	/* Taiko drum / mahjong panel: mutually exclusive input panels. */
+	protected CheckBoxPreference mPrefTatacon;
+	protected CheckBoxPreference mPrefMahjong;
 
 	@Override
 	protected void attachBaseContext(Context newBase) {
@@ -176,11 +181,35 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 		mPrefNetplayIpProto = (ListPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_NETPLAY_IP_PROTOCOL);
 
 		mPrefLanguage = (ListPreference)getPreferenceScreen().findPreference(com.seleuco.mame4droid.helpers.LocaleHelper.PREF_LANGUAGE);
+
+		mPrefTatacon = (CheckBoxPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_TATACON);
+		mPrefMahjong = (CheckBoxPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_MAHJONG);
+
+		// The drum and the mahjong panel replace the same on-screen controls, so
+		// only one of them may be on: ticking one clears the other.
+		if (mPrefTatacon != null && mPrefMahjong != null) {
+			mPrefTatacon.setOnPreferenceChangeListener((preference, value) -> {
+				if (Boolean.TRUE.equals(value)) mPrefMahjong.setChecked(false);
+				return true;
+			});
+			mPrefMahjong.setOnPreferenceChangeListener((preference, value) -> {
+				if (Boolean.TRUE.equals(value)) mPrefTatacon.setChecked(false);
+				return true;
+			});
+		}
 	}
 
 	  @Override
 	    protected void onResume() {
 	        super.onResume();
+
+	        // A layout stored by an older build can have both panels ticked. Only
+	        // the mahjong panel is active in that case, so show that here.
+	        if (mPrefTatacon != null && mPrefTatacon.isChecked()
+	            && mPrefMahjong != null && mPrefMahjong.isChecked()) {
+	            mPrefTatacon.setChecked(false);
+	        }
+
 	        // Setup the initial values
 	        //mCheckBoxPreference.setSummary(sharedPreferences.getBoolean(key, false) ? "Disable this setting" : "Enable this setting");
 		  	mPrefGlobalVideoRenderMode.setSummary(curVal(mPrefGlobalVideoRenderMode.getEntry()));

@@ -346,9 +346,9 @@
     <string name="pref_animated_title">Animated</string>
     <string name="pref_animated_summary">Animated touch control. Disable for performance boost</string>
     <string name="pref_tatacon_title">Taiko drum (tatacon)</string>
-    <string name="pref_tatacon_summary">Show an on-screen Taiko no Tatsujin drum instead of the stick. Centre = don, everything else = ka, each split into left/right. In Customize layout use MOVE to drag it and RESIZE to change its size (drag sideways for width, up/down for height)</string>
+    <string name="pref_tatacon_summary">Show an on-screen Taiko no Tatsujin drum instead of the stick. Centre = don, everything else = ka, each split into left/right. In Customize layout use MOVE to drag it and RESIZE to change its size (drag sideways for width, up/down for height). Exclusive with the mahjong panel: ticking one clears the other</string>
     <string name="pref_mahjong_title">Mahjong panel</string>
-    <string name="pref_mahjong_summary">Show an on-screen mahjong panel instead of the stick and buttons. Every tile and action is a separate button that sends a keyboard key, so it works with any mahjong game. In Customize layout use MOVE, OPACITY and HIDE on each button</string>
+    <string name="pref_mahjong_summary">Show an on-screen mahjong panel instead of the stick and buttons. Every tile and action is a separate button that sends a keyboard key, so it works with any mahjong game. In Customize layout use MOVE, OPACITY and HIDE on each button. Exclusive with the taiko drum: ticking one clears the other</string>
     <string name="pref_vibrate_title">Vibrate</string>
     <string name="pref_vibrate_summary">Master switch: haptic feedback for touch controls, analog stick, lightgun and mouse</string>
     <string name="pref_vibrate_strength_title">Vibration strength</string>

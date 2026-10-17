@@ -325,9 +325,9 @@
     <string name="pref_animated_title">动画</string>
     <string name="pref_animated_summary">动画触摸控制。禁用以提升性能</string>
     <string name="pref_tatacon_title">太鼓鼓面（tatacon）</string>
-    <string name="pref_tatacon_summary">显示太鼓达人触摸鼓面代替摇杆。中心=咚（don），其余全部=咔（ka），左右各分一半。在“自定义布局”里用 MOVE 拖动位置，用 RESIZE 调整大小（横向拖动改宽度，纵向拖动改高度）</string>
+    <string name="pref_tatacon_summary">显示太鼓达人触摸鼓面代替摇杆。中心=咚（don），其余全部=咔（ka），左右各分一半。在“自定义布局”里用 MOVE 拖动位置，用 RESIZE 调整大小（横向拖动改宽度，纵向拖动改高度）。与麻将面板互斥，勾选一个会自动取消另一个</string>
     <string name="pref_mahjong_title">麻将面板</string>
-    <string name="pref_mahjong_summary">显示麻将触摸面板代替摇杆和按键。每张牌和每个操作都是独立按键，发送键盘按键，适用于任何麻将游戏。在“自定义布局”里可对每个按键用 MOVE、OPACITY 和 HIDE</string>
+    <string name="pref_mahjong_summary">显示麻将触摸面板代替摇杆和按键。每张牌和每个操作都是独立按键，发送键盘按键，适用于任何麻将游戏。在“自定义布局”里可对每个按键用 MOVE、OPACITY 和 HIDE。与太鼓鼓面互斥，勾选一个会自动取消另一个</string>
     <string name="pref_vibrate_title">震动</string>
     <string name="pref_vibrate_summary">总开关：触摸控制、模拟摇杆、光枪和鼠标的震动反馈</string>
     <string name="pref_vibrate_strength_title">震动强度</string>
