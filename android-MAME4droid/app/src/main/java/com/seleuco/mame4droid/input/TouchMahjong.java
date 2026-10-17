@@ -342,14 +342,22 @@ public class TouchMahjong implements IController {
     private static final int MIN_CELL_W = 40;
 
     /**
+     * How many cell rows the panel is raised above the bottom edge of the screen.
+     * Bottom aligned it would sit under the navigation / gesture bar on landscape
+     * screens, which hides the last row of buttons.
+     */
+    private static final int RAISE_CELLS = 2;
+
+    /**
      * Appends the mahjong buttons to the freshly parsed controller layout.
      *
      * Preset order: the 17 tiles (A..Q) first, then the five actions (chi, pon,
      * kan, reach, ron), then everything else. Each of those groups starts on a
      * new row and wraps so the cells stay big enough to tap: in landscape the
      * tiles fit on one row (exactly as expected), in portrait they need two. All
-     * rows share one cell size, are centred and bottom aligned. The user is free
-     * to rearrange everything in the "customize layout" screen.
+     * rows share one cell size, are centred and kept {@link #RAISE_CELLS} rows
+     * above the bottom edge. The user is free to rearrange everything in the
+     * "customize layout" screen.
      */
     public void buildDefaultLayout(ArrayList<InputValue> values) {
         if (values == null) return;
@@ -383,7 +391,8 @@ public class TouchMahjong implements IController {
         }
 
         float gap = Math.max(1f, cellW * 0.06f);
-        float top = mh - (rows * cellH) - (mh * 0.01f);
+        float top = mh - (rows * cellH) - (mh * 0.01f) - (RAISE_CELLS * cellH);
+        if (top < 0) top = 0;
 
         int index = 0;
         int row = 0;
