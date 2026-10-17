@@ -28,6 +28,9 @@
     <string name="opt_save_state">Salvar estado</string>
     <string name="opt_settings">Configurações</string>
     <string name="opt_keyboard">Teclado</string>
+    <string name="opt_change_controller">Mudar controlador</string>
+    <string name="opt_edit_layout">Editar layout</string>
+    <string name="ctrl_normal">Botões normais</string>
 
     <string name="dlg_save_changes">Deseja salvar as alterações?</string>
     <string name="dlg_roms_message">Onde você guarda ou quer guardar seus arquivos de ROM?\n\nPor padrão, será usada uma pasta interna vazia (mas você deve copiar manualmente seus arquivos de ROM para lá usando um PC). Você também pode selecionar uma pasta com arquivos de ROM do seu armazenamento externo, que precisará ser autorizada na próxima etapa para que o MAME4droid possa ler as ROMs dela.\n\nAlém disso, se você selecionar uma pasta de armazenamento externo, seus arquivos de ROM não serão excluídos ao desinstalar o app, e você pode usar um gerenciador de arquivos do Android para mover suas ROMs para lá sem precisar de um PC.</string>

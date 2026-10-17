@@ -45,6 +45,8 @@
 package com.seleuco.mame4droid.input;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -312,6 +314,11 @@ public class ControlCustomizer {
 		float drumScaleX = 1f;
 		float drumScaleY = 1f;
 
+		Set<String> currentKeys = new HashSet<String>();
+		for (InputValue iv : values) {
+			currentKeys.add(iv.getType() + "," + iv.getValue());
+		}
+
 		for (InputValue iv : values) {
 			// Commit temporary offset changes to permanent offsets
 			iv.commitChanges();
@@ -361,6 +368,20 @@ public class ControlCustomizer {
 				drumScaleX = iv.getScaleX();
 				drumScaleY = iv.getScaleY();
 			}
+		}
+
+		// Preserve layout entries for controls that belong to other panels (switched off)
+		// so saving the current panel never wipes them.
+		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE) {
+			appendForeignGroups(definedStr, mm.getPrefsHelper().getDefinedControlLayoutLand(), 4, currentKeys);
+			appendForeignGroups(alphaStr, mm.getPrefsHelper().getDefinedControlLayoutAlphaLand(), 3, currentKeys);
+			appendForeignGroups(hiddenStr, mm.getPrefsHelper().getDefinedControlLayoutHiddenLand(), 2, currentKeys);
+			appendForeignGroups(scaleStr, mm.getPrefsHelper().getDefinedControlLayoutScaleLand(), 4, currentKeys);
+		} else {
+			appendForeignGroups(definedStr, mm.getPrefsHelper().getDefinedControlLayoutPortrait(), 4, currentKeys);
+			appendForeignGroups(alphaStr, mm.getPrefsHelper().getDefinedControlLayoutAlphaPortrait(), 3, currentKeys);
+			appendForeignGroups(hiddenStr, mm.getPrefsHelper().getDefinedControlLayoutHiddenPortrait(), 2, currentKeys);
+			appendForeignGroups(scaleStr, mm.getPrefsHelper().getDefinedControlLayoutScalePortrait(), 4, currentKeys);
 		}
 
 		if (mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_LANDSCAPE) {
@@ -977,6 +998,21 @@ public class ControlCustomizer {
 			int percentY = Math.round(valueMoved.getScaleY() * 100f);
 			float textY = r.centerY() - ((pValue.descent() + pValue.ascent()) / 2);
 			canvas.drawText(percentX + "% x " + percentY + "%", r.centerX(), textY, pValue);
+		}
+	}
+
+	private static void appendForeignGroups(StringBuilder fresh, String stored, int stride, Set<String> currentKeys) {
+		if (stored == null || stored.length() == 0) return;
+		String[] tokens = stored.split(",");
+		if (tokens.length % stride != 0) return;
+		for (int i = 0; i + stride <= tokens.length; i += stride) {
+			String typeValue = tokens[i].trim() + "," + tokens[i + 1].trim();
+			if (currentKeys.contains(typeValue)) continue;
+			if (fresh.length() > 0) fresh.append(",");
+			for (int j = 0; j < stride; j++) {
+				if (j > 0) fresh.append(",");
+				fresh.append(tokens[i + j].trim());
+			}
 		}
 	}
 }

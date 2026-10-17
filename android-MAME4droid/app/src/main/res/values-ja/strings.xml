@@ -28,6 +28,9 @@
     <string name="opt_save_state">ステートをセーブ</string>
     <string name="opt_settings">設定</string>
     <string name="opt_keyboard">キーボード</string>
+    <string name="opt_change_controller">コントローラー変更</string>
+    <string name="opt_edit_layout">レイアウト編集</string>
+    <string name="ctrl_normal">通常ボタン</string>
 
     <string name="dlg_save_changes">変更を保存しますか？</string>
     <string name="dlg_roms_message">ROM ファイルをどこに保存していますか、または保存したいですか？\n\nデフォルトでは空の内部フォルダが使用されます（PC を使って ROM ファイルを手動でそこにコピーする必要があります）。外部ストレージから ROM ファイルのあるフォルダを選択することもできます。次のステップで MAME4droid が ROM を読み取れるよう認証が必要です。\n\nまた、外部ストレージのフォルダを選択した場合、アプリをアンインストールしても ROM ファイルは削除されず、PC なしで Android のファイルマネージャーを使って ROM をそこに移動できます。</string>

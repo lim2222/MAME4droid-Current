@@ -51,6 +51,7 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -77,6 +78,7 @@ public class DialogHelper {
 	public final static int DIALOG_EMU_RESTART = 11;
 	public final static int DIALOG_NO_PERMISSIONS = 12;
 	public final static int DIALOG_ROMs = 13;
+	public final static int DIALOG_CHANGE_CONTROLLER = 14;
 
 	protected MAME4droid mm = null;
 
@@ -235,18 +237,6 @@ public class DialogHelper {
 				break;
 			case DIALOG_OPTIONS:
 			case DIALOG_FULLSCREEN:
-				final String sExit = mm.getString(R.string.opt_exit);
-				final String sHelp = mm.getString(R.string.opt_help);
-				final String sLoad = mm.getString(R.string.opt_load_state);
-				final String sSave = mm.getString(R.string.opt_save_state);
-				final String sNetplay = mm.getString(R.string.netplay);
-				final String sSettings = mm.getString(R.string.opt_settings);
-				final String sKeyboard = mm.getString(R.string.opt_keyboard);
-				CharSequence[] items1 = {sHelp, sLoad, sSave, sNetplay, sSettings, sKeyboard};
-				CharSequence[] items2 = {sHelp, sNetplay, sSettings, sKeyboard};
-				CharSequence[] items3 = {sExit, sHelp, sLoad, sSave, sNetplay, sSettings, sKeyboard};
-				CharSequence[] items4 = {sExit, sHelp, sNetplay, sSettings, sKeyboard};
-
 				boolean saveload = Emulator.isInGameButNotInMenu() && Emulator.getValue(Emulator.PAUSE)!=1;
 				/* Help only makes sense in the frontend (browsing ROMs, nothing
 				 * loaded yet); drop it from the menu once a game is running
@@ -256,11 +246,24 @@ public class DialogHelper {
 				final boolean inGame = Emulator.isInGame();
 
 				final int a = id == DIALOG_FULLSCREEN ? 0 : 1;
-				final int b =  saveload ? 0 : 2;
-				final int c =  inGame ? 1 : 0;
 
 				if (a == 1)
 					builder.setTitle(mm.getString(R.string.menu_choose_option));
+
+				final String sExit = mm.getString(R.string.opt_exit);
+				final String sHelp = mm.getString(R.string.opt_help);
+				final String sLoad = mm.getString(R.string.opt_load_state);
+				final String sSave = mm.getString(R.string.opt_save_state);
+				final String sNetplay = mm.getString(R.string.netplay);
+				final String sSettings = mm.getString(R.string.opt_settings);
+				final String sKeyboard = mm.getString(R.string.opt_keyboard);
+				final String sChangeCtrl = mm.getString(R.string.opt_change_controller);
+				final String sEditLayout = mm.getString(R.string.opt_edit_layout);
+
+				CharSequence[] items1 = {sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
+				CharSequence[] items2 = {sHelp, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
+				CharSequence[] items3 = {sExit, sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
+				CharSequence[] items4 = {sExit, sHelp, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
 
 				CharSequence[] items = saveload ? (id == DIALOG_OPTIONS ? items1 : items3) : (id == DIALOG_OPTIONS ? items2 : items4);
 
@@ -274,20 +277,28 @@ public class DialogHelper {
 
 				boolean notKeyboard = !mm.getPrefsHelper().isVirtualKeyboardEnabled() || mm.getInputHandler().getKeyboard().isKeyboardConnected() || mm.getMainHelper().isAndroidTV();
 
-				if(notKeyboard)
-					items = Arrays.copyOf(items, items.length-1);
+				if (notKeyboard) {
+					CharSequence[] filtered = new CharSequence[items.length - 1];
+					int w = 0;
+					for (CharSequence it : items) {
+						if (!sKeyboard.equals(it)) filtered[w++] = it;
+					}
+					items = filtered;
+				}
 
 				builder.setCancelable(true);
-				builder.setItems(items, new DialogInterface.OnClickListener() {
+				final CharSequence[] menuItems = items;
+				builder.setItems(menuItems, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int item) {
+						CharSequence choice = menuItems[item];
 
-						if (item == 0 && a == 0) {
-
+						if (sExit.equals(choice)) {
+							closeMenuDialog();
 							mm.showDialog(DialogHelper.DIALOG_EXIT);
-
-						} else if (item == 1 - a && c == 0) {
+							return;
+						} else if (sHelp.equals(choice)) {
 							mm.getMainHelper().showHelp();
-						} else if (item == 2 - a - c && b == 0) {
+						} else if (sLoad.equals(choice)) {
 							Emulator.resume();
 							Emulator.setValue(Emulator.LOADSTATE, 1);
 							Emulator.setSaveorload(true);
@@ -296,7 +307,7 @@ public class DialogHelper {
 							} catch (InterruptedException e) {
 							}
 							Emulator.setValue(Emulator.LOADSTATE, 0);
-						} else if (item == 3 - a - c && b == 0) {
+						} else if (sSave.equals(choice)) {
 							Emulator.resume();
 							Emulator.setValue(Emulator.SAVESTATE, 1);
 							Emulator.setSaveorload(true);
@@ -305,19 +316,24 @@ public class DialogHelper {
 							} catch (InterruptedException e) {
 							}
 							Emulator.setValue(Emulator.SAVESTATE, 0);
-						} else if (item == 4 - a - b - c) {
+						} else if (sNetplay.equals(choice)) {
 							mm.getNetPlay().createDialog();
-						} else if (item == 5 - a - b - c) {
+						} else if (sChangeCtrl.equals(choice)) {
+							closeMenuDialog();
+							mm.showDialog(DialogHelper.DIALOG_CHANGE_CONTROLLER);
+							return;
+						} else if (sEditLayout.equals(choice)) {
+							closeMenuDialog();
+							ControlCustomizer.setEnabled(true);
+							mm.getMainHelper().updateMAME4droid();
+							return;
+						} else if (sSettings.equals(choice)) {
 							mm.getMainHelper().showSettings();
-						} else if (item == 6 - a - b - c) {
+						} else if (sKeyboard.equals(choice)) {
 							((IEmuView) mm.getEmuView()).showSoftKeyboard();
 							Emulator.resume();
 						}
-						Emulator.setInOptions(false);
-
-						DialogHelper.savedDialog = DIALOG_NONE;
-						mm.removeDialog(DIALOG_OPTIONS);
-						mm.removeDialog(DIALOG_FULLSCREEN);
+						closeMenuDialog();
 					}
 				});
 				builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
@@ -344,6 +360,40 @@ public class DialogHelper {
 						return true;
 					}
 				});
+				break;
+			case DIALOG_CHANGE_CONTROLLER:
+				CharSequence[] ctrlItems = {
+						mm.getString(R.string.ctrl_normal),
+						mm.getString(R.string.pref_tatacon_title),
+						mm.getString(R.string.pref_mahjong_title)};
+				int ctrlChecked = mm.getPrefsHelper().isMahjong() ? 2 : (mm.getPrefsHelper().isTatacon() ? 1 : 0);
+				builder.setTitle(mm.getString(R.string.opt_change_controller))
+					.setSingleChoiceItems(ctrlItems, ctrlChecked, new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int item) {
+							SharedPreferences.Editor editor = mm.getPrefsHelper().getSharedPreferences().edit();
+							boolean enableMahjong = item == 2;
+							boolean enableTatacon = item == 1;
+							editor.putBoolean(PrefsHelper.PREF_MAHJONG, enableMahjong);
+							editor.putBoolean(PrefsHelper.PREF_TATACON, enableTatacon);
+							editor.commit();
+							dialog.dismiss();
+							Emulator.setInOptions(false);
+							DialogHelper.savedDialog = DIALOG_NONE;
+							mm.removeDialog(DIALOG_CHANGE_CONTROLLER);
+							mm.getMainHelper().updateMAME4droid();
+							Emulator.resume();
+						}
+					})
+					.setOnCancelListener(new DialogInterface.OnCancelListener() {
+						@Override
+						public void onCancel(DialogInterface dialog) {
+							Emulator.setInOptions(false);
+							DialogHelper.savedDialog = DIALOG_NONE;
+							mm.removeDialog(DIALOG_CHANGE_CONTROLLER);
+							Emulator.resume();
+						}
+					});
+				dialog = builder.create();
 				break;
 			case DIALOG_EMU_RESTART:
 				builder.setTitle(mm.getString(R.string.dlg_restart_title))
@@ -405,10 +455,20 @@ public class DialogHelper {
 			DialogHelper.savedDialog = DIALOG_FINISH_CUSTOM_LAYOUT;
 		} else if (id == DIALOG_EMU_RESTART) {
 			Emulator.pause();
+		} else if (id == DIALOG_CHANGE_CONTROLLER) {
+			Emulator.pause();
+			DialogHelper.savedDialog = DIALOG_CHANGE_CONTROLLER;
 		} else if (id == DIALOG_NO_PERMISSIONS) {
 			DialogHelper.savedDialog = DIALOG_NO_PERMISSIONS;
 		}
 
+	}
+
+	private void closeMenuDialog() {
+		Emulator.setInOptions(false);
+		DialogHelper.savedDialog = DIALOG_NONE;
+		mm.removeDialog(DIALOG_OPTIONS);
+		mm.removeDialog(DIALOG_FULLSCREEN);
 	}
 
 	public void removeDialogs() {
