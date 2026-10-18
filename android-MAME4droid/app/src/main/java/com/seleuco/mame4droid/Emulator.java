@@ -64,6 +64,7 @@ import android.view.View;
 
 import com.seleuco.mame4droid.helpers.DialogHelper;
 import com.seleuco.mame4droid.helpers.PrefsHelper;
+import com.seleuco.mame4droid.input.ControlCustomizer;
 import com.seleuco.mame4droid.input.TouchController;
 import com.seleuco.mame4droid.views.EmulatorViewGL;
 import com.seleuco.mame4droid.widgets.WarnWidget;
@@ -264,6 +265,14 @@ public class Emulator {
 	private static boolean inMenu = false;
 	private static boolean oldInMenu = false;
 
+	// Per-game custom layout: the driver name the on-screen controls were last
+	// built for, and the frame counter pacing the poll in requestRenderFrame().
+	// Game switches normally rebuild the layout through initInput(); this poll
+	// is a safety net for switches that slip past that (coalesced runnables,
+	// netplay re-joins), so the right per-game layout is applied within ~2s.
+	private static String layoutGameApplied = null;
+	private static int layoutGameFrames = 0;
+
 	public static boolean isInGame() {
 		return Emulator.getValue(Emulator.IN_GAME) == 1;
 	}
@@ -453,6 +462,32 @@ public class Emulator {
 					}
 				}
 				oldInMenu = inMenu;
+
+				// Per-game custom layout safety net: a game switch normally
+				// rebuilds the controls through initInput() -> updateMAME4droid(),
+				// but if that posted runnable is ever skipped the controls would
+				// keep showing the previous game's layout. Compare the driver name
+				// a few times a second while a game runs and rebuild once when it
+				// changes. Skipped while the customizer is open so unsaved edits
+				// are never yanked away.
+				if (++layoutGameFrames >= 60) {
+					layoutGameFrames = 0;
+					if (isInGame()) {
+						String game = mm.getPrefsHelper().getLayoutGame();
+						if (!game.isEmpty() && !game.equals(layoutGameApplied)
+							&& !ControlCustomizer.isEnabled()) {
+							layoutGameApplied = game;
+							mm.runOnUiThread(new Runnable() {
+								public void run() {
+									mm.getMainHelper().updateMAME4droid();
+								}
+							});
+						}
+					} else {
+						layoutGameApplied = null;
+					}
+				}
+
 				// target = MAME's declared refresh (native, boot/perf-immune); ADPF
 				// gets the real frame WORK time (native, pre-throttle-sleep) merged
 				// with the GL render time. Whole path dormant during rollback FF.

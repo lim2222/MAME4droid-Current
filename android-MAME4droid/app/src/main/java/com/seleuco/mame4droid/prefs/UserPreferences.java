@@ -528,10 +528,9 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 		    	       .setCancelable(false)
 		    	       .setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
 		    	           public void onClick(DialogInterface dialog, int id) {
-		    					SharedPreferences.Editor editor =  settings.edit();
-		    					editor.putString(PrefsHelper.PREF_DEFINED_CONTROL_LAYOUT, null);
-		    					editor.putString(PrefsHelper.PREF_DEFINED_CONTROL_LAYOUT_P, null);
-		    					editor.commit();
+		    					// Also drops the per game copies, or games with their
+		    					// own saved layout would ignore the reset.
+		    					PrefsHelper.resetAllDefinedControlLayouts(settings);
 		    	           }
 		    	       })
 		    	       .setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {

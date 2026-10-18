@@ -743,83 +743,165 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	}
 
 
+	// ---------------------------------------------------------------------
+	// Custom control layout, stored per orientation AND per game.
+	//
+	// The positions / opacities / hidden flags / sizes edited in the layout
+	// customizer are kept for the game being played, not globally: MAME's own
+	// game select menu reports the highlighted driver name (selgame.cpp "DAV
+	// HACK" -> myosd_netplay_selected_game -> Emulator.GAME_SELECTED), and
+	// every game start re-reads the layout through Emulator.initInput(), so
+	// each game automatically loads its own layout. This is what lets a
+	// layout of invisible buttons sit exactly over one particular game's
+	// on-screen elements (e.g. mahjong cards) without being redone for every
+	// other game.
+	//
+	// The unsuffixed keys keep their original meaning: they hold the shared
+	// layout, used as the fallback for games without a layout of their own
+	// yet, and every save writes them too, so a generic tweak still reaches
+	// every not-yet-customized game.
+	// ---------------------------------------------------------------------
+
+	/**
+	 * Name of the game the custom layout belongs to, as reported by MAME's
+	 * game select menu; empty while no game has been selected yet (or when the
+	 * name cannot be read), in which case the shared layout is used.
+	 */
+	public String getLayoutGame() {
+		String game = null;
+		try {
+			game = Emulator.getValueStr(Emulator.GAME_SELECTED);
+		} catch (Throwable t) {
+			// Native side not ready yet: fall back to the shared layout.
+		}
+		if (game == null)
+			return "";
+		// Driver names are [a-z0-9_], but the external launch path hands us a
+		// file name, so keep the key to a safe charset.
+		return game.trim().replaceAll("[^A-Za-z0-9_-]", "_");
+	}
+
+	/**
+	 * Storage key of a layout entry for the game being played, if any.
+	 */
+	private String scopedLayoutKey(String base) {
+		String game = getLayoutGame();
+		return game.isEmpty() ? base : base + "__" + game;
+	}
+
+	/**
+	 * Reads a layout entry: the game specific copy when the current game has
+	 * one, otherwise the shared layout.
+	 */
+	private String getLayoutPref(String base) {
+		SharedPreferences prefs = getSharedPreferences();
+		String scoped = prefs.getString(scopedLayoutKey(base), null);
+		if (scoped != null)
+			return scoped;
+		return prefs.getString(base, null);
+	}
+
+	/**
+	 * Writes a layout entry to the game specific copy and to the shared copy
+	 * at once, so games without a layout of their own keep following the last
+	 * saved one.
+	 */
+	private void setLayoutPref(String base, String value) {
+		SharedPreferences.Editor editor = getSharedPreferences().edit();
+		editor.putString(base, value);
+		String game = getLayoutGame();
+		if (!game.isEmpty())
+			editor.putString(base + "__" + game, value);
+		editor.commit();
+	}
+
 	public String getDefinedControlLayoutLand() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT);
 	}
 
 	public void setDefinedControlLayoutLand(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT, value);
 	}
 
 	public String getDefinedControlLayoutPortrait() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P);
 	}
 
 	public void setDefinedControlLayoutPortrait(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P, value);
 	}
 
 	public String getDefinedControlLayoutAlphaLand() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_ALPHA, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_ALPHA);
 	}
 
 	public void setDefinedControlLayoutAlphaLand(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_ALPHA, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_ALPHA, value);
 	}
 
 	public String getDefinedControlLayoutAlphaPortrait() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA);
 	}
 
 	public void setDefinedControlLayoutAlphaPortrait(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA, value);
 	}
 
 	public String getDefinedControlLayoutHiddenLand() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN);
 	}
 
 	public void setDefinedControlLayoutHiddenLand(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, value);
 	}
 
 	public String getDefinedControlLayoutHiddenPortrait() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN);
 	}
 
 	public void setDefinedControlLayoutHiddenPortrait(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN, value);
 	}
 
 	public String getDefinedControlLayoutScaleLand() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_SCALE, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_SCALE);
 	}
 
 	public void setDefinedControlLayoutScaleLand(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_SCALE, value);
-		editor.commit();
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_SCALE, value);
 	}
 
 	public String getDefinedControlLayoutScalePortrait() {
-		return getSharedPreferences().getString(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE, null);
+		return getLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE);
 	}
 
 	public void setDefinedControlLayoutScalePortrait(String value) {
-		SharedPreferences.Editor editor = getSharedPreferences().edit();
-		editor.putString(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE, value);
+		setLayoutPref(PREF_DEFINED_CONTROL_LAYOUT_P_SCALE, value);
+	}
+
+	/**
+	 * Removes every stored custom layout: the shared ones and the per game
+	 * copies alike, so "restore default layout" really puts everything back
+	 * to defaults no matter how many games have been customized.
+	 */
+	public static void resetAllDefinedControlLayouts(SharedPreferences prefs) {
+		final String[] prefixes = {
+			PREF_DEFINED_CONTROL_LAYOUT, PREF_DEFINED_CONTROL_LAYOUT_P,
+			PREF_DEFINED_CONTROL_LAYOUT_ALPHA, PREF_DEFINED_CONTROL_LAYOUT_P_ALPHA,
+			PREF_DEFINED_CONTROL_LAYOUT_HIDDEN, PREF_DEFINED_CONTROL_LAYOUT_P_HIDDEN,
+			PREF_DEFINED_CONTROL_LAYOUT_SCALE, PREF_DEFINED_CONTROL_LAYOUT_P_SCALE
+		};
+		SharedPreferences.Editor editor = prefs.edit();
+		for (String key : prefs.getAll().keySet()) {
+			for (String prefix : prefixes) {
+				// Per game copies are stored as "<prefix>__<driver>", so any key
+				// that starts with the prefix (exact or suffixed) belongs here.
+				if (key.equals(prefix) || key.startsWith(prefix + "__")) {
+					editor.remove(key);
+					break;
+				}
+			}
+		}
 		editor.commit();
 	}
 
