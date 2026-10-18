@@ -279,6 +279,9 @@ public class InputView extends ImageView {
 				// Each mahjong button draws itself (press shrinks it), so it only
 				// needs its geometry and opacity refreshed.
 				mm.getInputHandler().getTouchMahjong().updateImage(v);
+			} else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) {
+				// Same idea for the hanafuda panel buttons.
+				mm.getInputHandler().getTouchHanafuda().updateImage(v);
 			}
 		}
 	}
@@ -376,6 +379,9 @@ public class InputView extends ImageView {
 					// Mahjong panel: each button draws itself so a press can
 					// shrink it slightly.
 					mm.getInputHandler().getTouchMahjong().draw(canvas, v.getValue());
+				} else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) {
+					// Hanafuda panel: same idea.
+					mm.getInputHandler().getTouchHanafuda().draw(canvas, v.getValue());
 				}
 			}
 
@@ -406,6 +412,7 @@ public class InputView extends ImageView {
 					else if (mm.getPrefsHelper().getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_ANALOG_RECT) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_TATACON_RECT) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) canvas.drawRect(r, p2);
+					else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) canvas.drawRect(r, p2);
 				}
 			}
 

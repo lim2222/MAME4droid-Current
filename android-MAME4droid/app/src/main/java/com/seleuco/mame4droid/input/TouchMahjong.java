@@ -275,7 +275,7 @@ public class TouchMahjong implements IController {
     /** Forgets which pointer held which button (used when inputs are reset). */
     public void clearPointerOwnership() {
         TouchController tc = touchController();
-        if (tc != null) tc.clearMahjongTouches();
+        if (tc != null) tc.clearPanelTouches();
     }
 
     private void sendKey(int index, boolean down) {

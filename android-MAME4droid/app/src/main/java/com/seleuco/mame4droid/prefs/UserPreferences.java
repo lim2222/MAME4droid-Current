@@ -111,9 +111,10 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 
 	protected ListPreference mPrefLanguage;
 
-	/* Taiko drum / mahjong panel: mutually exclusive input panels. */
+	/* Taiko drum / mahjong panel / hanafuda panel: mutually exclusive panels. */
 	protected CheckBoxPreference mPrefTatacon;
 	protected CheckBoxPreference mPrefMahjong;
+	protected CheckBoxPreference mPrefHanafuda;
 
 	@Override
 	protected void attachBaseContext(Context newBase) {
@@ -184,16 +185,30 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 
 		mPrefTatacon = (CheckBoxPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_TATACON);
 		mPrefMahjong = (CheckBoxPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_MAHJONG);
+		mPrefHanafuda = (CheckBoxPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_HANAFUDA);
 
-		// The drum and the mahjong panel replace the same on-screen controls, so
-		// only one of them may be on: ticking one clears the other.
-		if (mPrefTatacon != null && mPrefMahjong != null) {
+		// The three panels replace the same on-screen controls, so only one of
+		// them may be on: ticking one clears the other two.
+		if (mPrefTatacon != null && mPrefMahjong != null && mPrefHanafuda != null) {
 			mPrefTatacon.setOnPreferenceChangeListener((preference, value) -> {
-				if (Boolean.TRUE.equals(value)) mPrefMahjong.setChecked(false);
+				if (Boolean.TRUE.equals(value)) {
+					mPrefMahjong.setChecked(false);
+					mPrefHanafuda.setChecked(false);
+				}
 				return true;
 			});
 			mPrefMahjong.setOnPreferenceChangeListener((preference, value) -> {
-				if (Boolean.TRUE.equals(value)) mPrefTatacon.setChecked(false);
+				if (Boolean.TRUE.equals(value)) {
+					mPrefTatacon.setChecked(false);
+					mPrefHanafuda.setChecked(false);
+				}
+				return true;
+			});
+			mPrefHanafuda.setOnPreferenceChangeListener((preference, value) -> {
+				if (Boolean.TRUE.equals(value)) {
+					mPrefTatacon.setChecked(false);
+					mPrefMahjong.setChecked(false);
+				}
 				return true;
 			});
 		}
@@ -203,10 +218,14 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 	    protected void onResume() {
 	        super.onResume();
 
-	        // A layout stored by an older build can have both panels ticked. Only
-	        // the mahjong panel is active in that case, so show that here.
-	        if (mPrefTatacon != null && mPrefTatacon.isChecked()
-	            && mPrefMahjong != null && mPrefMahjong.isChecked()) {
+	        // A layout stored by an older build can have more than one panel
+	        // ticked. Only the mahjong panel is active in that case (then the
+	        // hanafuda one, then the drum), so show exactly that here.
+	        if (mPrefMahjong != null && mPrefMahjong.isChecked()) {
+	            if (mPrefTatacon != null && mPrefTatacon.isChecked()) mPrefTatacon.setChecked(false);
+	            if (mPrefHanafuda != null && mPrefHanafuda.isChecked()) mPrefHanafuda.setChecked(false);
+	        } else if (mPrefHanafuda != null && mPrefHanafuda.isChecked()
+	            && mPrefTatacon != null && mPrefTatacon.isChecked()) {
 	            mPrefTatacon.setChecked(false);
 	        }
 

@@ -79,9 +79,10 @@ public class TouchController implements IController {
 	protected static int[] oldtouches = new int[MAX_FINGERS];
 	protected static boolean[] touchstates = new boolean[MAX_FINGERS];
 
-	// Mahjong panel: which button each pointer is holding, -1 when the pointer is
-	// not on the panel. Needed so a lifted finger releases exactly its own key.
-	protected static int[] mahjongTouches = new int[MAX_FINGERS];
+	// Mahjong / hanafuda panel: which button each pointer is holding, -1 when the
+	// pointer is not on the panel. Needed so a lifted finger releases exactly its
+	// own key. Both panels share it, they are mutually exclusive.
+	protected static int[] panelTouches = new int[MAX_FINGERS];
 
 	final public static int TYPE_MAIN_RECT = 1;
 	final public static int TYPE_STICK_RECT = 2;
@@ -97,6 +98,8 @@ public class TouchController implements IController {
 	// Mahjong panel button. A single entry is both the hit area and the drawn
 	// image (like the drum); value = index into TouchMahjong's button table.
 	final public static int TYPE_MAHJONG_IMG = 10;
+	// Hanafuda panel button, same idea; value = index into TouchHanafuda's table.
+	final public static int TYPE_HANAFUDA_IMG = 11;
 
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
@@ -128,7 +131,7 @@ public class TouchController implements IController {
 		for (int i = 0; i < NUM_BUTTONS; i++)
 			btnStates[i] = old_btnStates[i] = BTN_NO_PRESS_STATE;
 		for (int i = 0; i < MAX_FINGERS; i++)
-			mahjongTouches[i] = -1;
+			panelTouches[i] = -1;
 	}
 
 	public void setMAME4droid(MAME4droid value) {
@@ -267,15 +270,18 @@ public class TouchController implements IController {
 					// AABB Collision check against UI layout rects
 					if (iv.getRect().contains(x, y) && isHandledTouchItem(iv)) {
 
-						if (iv.getType() == TYPE_MAHJONG_IMG) {
-							// Mahjong panel: every button is a plain keyboard key.
+						if (iv.getType() == TYPE_MAHJONG_IMG || iv.getType() == TYPE_HANAFUDA_IMG) {
+							// Mahjong / hanafuda panel: every button is a plain keyboard key.
 							handled = true;
 							int mj = iv.getValue();
-							if (mahjongTouches[id] != mj) {
-								if (mahjongTouches[id] != -1)
-									mm.getInputHandler().getTouchMahjong().release(mahjongTouches[id]);
-								mahjongTouches[id] = mj;
-								mm.getInputHandler().getTouchMahjong().press(mj);
+							if (panelTouches[id] != mj) {
+								if (panelTouches[id] != -1)
+									releasePanelKey(panelTouches[id]);
+								panelTouches[id] = mj;
+								if (iv.getType() == TYPE_HANAFUDA_IMG)
+									mm.getInputHandler().getTouchHanafuda().press(mj);
+								else
+									mm.getInputHandler().getTouchMahjong().press(mj);
 							}
 						}
 						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT) {
@@ -342,9 +348,9 @@ public class TouchController implements IController {
 		// Reconcile lifting states (Debouncing logic for low-quality digitizers)
 		for (int i = 0; i < touchstates.length; i++) {
 			// A finger that left the panel releases the key it was holding.
-			if (!touchstates[i] && mahjongTouches[i] != -1) {
-				mm.getInputHandler().getTouchMahjong().release(mahjongTouches[i]);
-				mahjongTouches[i] = -1;
+			if (!touchstates[i] && panelTouches[i] != -1) {
+				releasePanelKey(panelTouches[i]);
+				panelTouches[i] = -1;
 			}
 
 			if (!touchstates[i] && newtouches[i] != 0) {
@@ -430,8 +436,8 @@ public class TouchController implements IController {
 	}
 
 	public Boolean isHandledStick(){
-		// The taiko drum / mahjong panel replace the stick / dpad while enabled.
-		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong()) return false;
+		// The taiko drum / mahjong / hanafuda panel replace the stick / dpad while enabled.
+		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda()) return false;
 
 		// A stick hidden in the customizer takes no input either.
 		if (isControlHidden(TYPE_STICK_IMG) || isControlHidden(TYPE_ANALOG_RECT)) return false;
@@ -477,6 +483,10 @@ public class TouchController implements IController {
 			// Only shown while the mahjong panel is enabled.
 			handle = mm.getPrefsHelper().isMahjong();
 		}
+		else if(type == TouchController.TYPE_HANAFUDA_IMG) {
+			// Only shown while the hanafuda panel is enabled.
+			handle = mm.getPrefsHelper().isHanafuda();
+		}
 		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT ){
 
 			// Taiko mode: the drum replaces the action buttons, only coin /
@@ -487,9 +497,9 @@ public class TouchController implements IController {
 				return false;
 			}
 
-			// Mahjong mode: the panel replaces the action buttons and the stick,
-			// only coin / start / option / exit are kept.
-			if(mm.getPrefsHelper().isMahjong()
+			// Mahjong / hanafuda mode: the panel replaces the action buttons and
+			// the stick, only coin / start / option / exit are kept.
+			if((mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda())
 				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
 				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
 				return false;
@@ -548,10 +558,21 @@ public class TouchController implements IController {
 		return handle;
 	}
 
-	/** Drops the per-pointer mahjong ownership (used when inputs are reset). */
-	public void clearMahjongTouches() {
+	/**
+	 * Releases the key held by a pointer on the mahjong / hanafuda panel (used
+	 * when a finger lifts or slides off a button). Both panels are asked to
+	 * release the index: they are mutually exclusive and each one ignores
+	 * buttons it is not holding, so the inactive panel is a no-op.
+	 */
+	private void releasePanelKey(int index) {
+		mm.getInputHandler().getTouchMahjong().release(index);
+		mm.getInputHandler().getTouchHanafuda().release(index);
+	}
+
+	/** Drops the per-pointer panel ownership (used when inputs are reset). */
+	public void clearPanelTouches() {
 		for (int i = 0; i < MAX_FINGERS; i++)
-			mahjongTouches[i] = -1;
+			panelTouches[i] = -1;
 	}
 
 	/** True when any loaded control of the given type is hidden in the customizer. */
@@ -709,10 +730,13 @@ public class TouchController implements IController {
 			Log.e(TAG, "Failed to parse on-screen controller layout file", e);
 		}
 
-		// The mahjong panel is generated (not part of the raw layout files) so
-		// that it can adapt to whatever main rect the orientation uses.
+		// The mahjong / hanafuda panels are generated (not part of the raw layout
+		// files) so that they can adapt to whatever main rect the orientation uses.
 		if (mm.getPrefsHelper().isMahjong()) {
 			mm.getInputHandler().getTouchMahjong().buildDefaultLayout(values);
+		}
+		if (mm.getPrefsHelper().isHanafuda()) {
+			mm.getInputHandler().getTouchHanafuda().buildDefaultLayout(values);
 		}
 	}
 

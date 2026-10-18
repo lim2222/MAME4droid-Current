@@ -170,6 +170,10 @@
 			android:title="@string/pref_mahjong_title" android:summary="@string/pref_mahjong_summary"
 			android:defaultValue="false" />
 
+		<CheckBoxPreference android:key="PREF_HANAFUDA"
+			android:title="@string/pref_hanafuda_title" android:summary="@string/pref_hanafuda_summary"
+			android:defaultValue="false" />
+
 		<ListPreference
 			android:entries="@array/pref_analog_vibrate_options"
 			android:title="@string/pref_analog_vibrate_title"

@@ -143,6 +143,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_ANIMATED_INPUT = "PREF_ANIMATED_INPUT";
 	final static public String PREF_TATACON = "PREF_TATACON";
 	final static public String PREF_MAHJONG = "PREF_MAHJONG";
+	final static public String PREF_HANAFUDA = "PREF_HANAFUDA";
 	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
 	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
 	final static public String PREF_TATACON_SCALEX_LAND = "PREF_TATACON_SCALEX_LAND";
@@ -501,17 +502,22 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	}
 
 	/**
-	 * Taiko drum (tatacon) touch control enabled. The drum and the mahjong panel
-	 * replace the same controls, so only one of them can be on: if both have been
-	 * stored the mahjong panel wins and the drum stays off.
+	 * Taiko drum (tatacon) touch control enabled. The drum and the panels replace
+	 * the same controls, so only one of them can be on: if more have been stored
+	 * the mahjong panel wins, then the hanafuda panel, and the drum stays off.
 	 */
 	public boolean isTatacon() {
-		return getSharedPreferences().getBoolean(PREF_TATACON, false) && !isMahjong();
+		return getSharedPreferences().getBoolean(PREF_TATACON, false) && !isMahjong() && !isHanafuda();
 	}
 
 	/** Mahjong touch panel enabled: a bank of tile / action buttons. */
 	public boolean isMahjong() {
 		return getSharedPreferences().getBoolean(PREF_MAHJONG, false);
+	}
+
+	/** Hanafuda touch panel enabled: a bank of card / action buttons. */
+	public boolean isHanafuda() {
+		return getSharedPreferences().getBoolean(PREF_HANAFUDA, false) && !isMahjong();
 	}
 
 	/**

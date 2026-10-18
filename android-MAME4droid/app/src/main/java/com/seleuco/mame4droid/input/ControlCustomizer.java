@@ -265,8 +265,9 @@ public class ControlCustomizer {
 	 * the customizer is allowed to show and edit. The same predicate the game
 	 * uses to decide what to draw and what takes touches, so panels that are
 	 * switched off leave nothing behind to grab: outside taiko mode the drum is
-	 * gone, and while taiko or mahjong is on the dpad / stick / action buttons
-	 * are gone. An invisible control can therefore never be edited by accident.
+	 * gone, and while taiko, mahjong or hanafuda is on the dpad / stick /
+	 * action buttons are gone. An invisible control can therefore never be
+	 * edited by accident.
 	 */
 	private boolean isEditable(InputValue iv) {
 		return Boolean.TRUE.equals(
@@ -286,7 +287,8 @@ public class ControlCustomizer {
 				iv.getType() == TouchController.TYPE_STICK_IMG ||
 				isTatacon ||
 				iv.getType() == TouchController.TYPE_ANALOG_RECT ||
-				iv.getType() == TouchController.TYPE_MAHJONG_IMG)
+				iv.getType() == TouchController.TYPE_MAHJONG_IMG ||
+				iv.getType() == TouchController.TYPE_HANAFUDA_IMG)
 				&& iv.getRect().contains(x, y)) {
 
 				valueMoved = iv;
@@ -946,6 +948,8 @@ public class ControlCustomizer {
 				} else if (type == TouchController.TYPE_TATACON_RECT) {
 					draw = true;
 				} else if (type == TouchController.TYPE_MAHJONG_IMG) {
+					draw = true;
+				} else if (type == TouchController.TYPE_HANAFUDA_IMG) {
 					draw = true;
 				}
 
