@@ -264,8 +264,11 @@ public class InputView extends ImageView {
 					stick_image.setBounds(v.getRect());
 					stick_image.setAlpha(alpha);
 				}
-			} else if (v.getType() == TouchController.TYPE_BUTTON_IMG) {
+			} else if (v.getType() == TouchController.TYPE_BUTTON_IMG
+				|| TouchController.isSystemImgType(v.getType())) {
 				// Set the bounds and alpha for both the pressed and unpressed states of this button.
+				// The panel's system button copies share the artwork of the normal
+				// buttons, looked up by value, so the very same entries are used.
 				btns_images[v.getValue()][IController.BTN_PRESS_STATE].setBounds(v.getRect());
 				btns_images[v.getValue()][IController.BTN_PRESS_STATE].setAlpha(alpha);
 				btns_images[v.getValue()][IController.BTN_NO_PRESS_STATE].setBounds(v.getRect());
@@ -372,8 +375,11 @@ public class InputView extends ImageView {
 				} else if (v.getType() == TouchController.TYPE_TATACON_RECT) {
 					// Taiko drum: delegate drawing to its own class.
 					mm.getInputHandler().getTouchTaiko().draw(canvas);
-				} else if (v.getType() == TouchController.TYPE_BUTTON_IMG) {
+				} else if (v.getType() == TouchController.TYPE_BUTTON_IMG
+					|| TouchController.isSystemImgType(v.getType())) {
 					// Select the correct button image (pressed or unpressed).
+					// The panel's system button copies draw the shared artwork
+					// of the normal buttons, looked up by value.
 					d = btns_images[v.getValue()][mm.getInputHandler().getTouchController().getBtnStates()[v.getValue()]];
 				} else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) {
 					// Mahjong panel: each button draws itself so a press can
@@ -407,7 +413,8 @@ public class InputView extends ImageView {
 				Rect r = v.getRect();
 				if (r != null) {
 					// Draw rectangles for buttons and the currently active stick type.
-					if (v.getType() == TouchController.TYPE_BUTTON_RECT) canvas.drawRect(r, p2);
+					if (v.getType() == TouchController.TYPE_BUTTON_RECT
+						|| TouchController.isSystemRectType(v.getType())) canvas.drawRect(r, p2);
 					else if (mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_STICK_RECT) canvas.drawRect(r, p2);
 					else if (mm.getPrefsHelper().getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD && v.getType() == TouchController.TYPE_ANALOG_RECT) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_TATACON_RECT) canvas.drawRect(r, p2);

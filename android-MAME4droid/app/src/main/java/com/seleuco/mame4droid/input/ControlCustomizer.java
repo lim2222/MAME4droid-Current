@@ -252,12 +252,30 @@ public class ControlCustomizer {
 			return (typeB == TouchController.TYPE_BUTTON_RECT || typeB == TouchController.TYPE_BUTTON_IMG)
 				&& a.getValue() == b.getValue();
 		}
+		if (TouchController.isSystemRectType(typeA) || TouchController.isSystemImgType(typeA)) {
+			// A panel's own system button: its rect and its image, same panel
+			// family and same value. Never paired with the normal layout's
+			// buttons, each set keeps its own state.
+			return TouchController.systemRectFamily(typeA) == TouchController.systemRectFamily(typeB)
+				&& a.getValue() == b.getValue();
+		}
 		if (typeA == TouchController.TYPE_STICK_IMG || typeA == TouchController.TYPE_STICK_RECT ||
 			typeA == TouchController.TYPE_ANALOG_RECT) {
 			return typeB == TouchController.TYPE_STICK_RECT || typeB == TouchController.TYPE_STICK_IMG ||
 				typeB == TouchController.TYPE_ANALOG_RECT;
 		}
 		return typeA == typeB && a.getValue() == b.getValue();
+	}
+
+	/**
+	 * Image type drawing the artwork of a rect type: the normal button's
+	 * TYPE_BUTTON_IMG, or the panel copy whose pair is declared right after
+	 * its rect type.
+	 */
+	private static int artworkTypeFor(int rectType) {
+		return rectType == TouchController.TYPE_BUTTON_RECT
+			? TouchController.TYPE_BUTTON_IMG
+			: rectType + 1;
 	}
 
 	/**
@@ -284,6 +302,7 @@ public class ControlCustomizer {
 			boolean isTatacon = (iv.getType() == TouchController.TYPE_TATACON_RECT);
 			if (isTatacon != tatacon) continue;
 			if ((iv.getType() == TouchController.TYPE_BUTTON_RECT ||
+				TouchController.isSystemRectType(iv.getType()) ||
 				iv.getType() == TouchController.TYPE_STICK_IMG ||
 				isTatacon ||
 				iv.getType() == TouchController.TYPE_ANALOG_RECT ||
@@ -454,6 +473,72 @@ public class ControlCustomizer {
 	}
 
 	/**
+	 * Gives the panel's system button copies (exit / option / coin / start)
+	 * the stored state of the normal layout's buttons until they own one:
+	 * upgrading then keeps every saved layout, and a panel whose buttons were
+	 * never touched simply follows the normal ones. A copy whose property has
+	 * an entry of its own is left alone, so as soon as a panel's buttons are
+	 * customized they stay independent. RESET returns them to following the
+	 * normal layout again, the panel's entries are simply absent once saved.
+	 */
+	public void seedPanelSystemButtons() {
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+		if (values == null) return;
+
+		int rectType;
+		if (mm.getPrefsHelper().isMahjong()) rectType = TouchController.TYPE_MAHJONG_SYS_RECT;
+		else if (mm.getPrefsHelper().isHanafuda()) rectType = TouchController.TYPE_HANAFUDA_SYS_RECT;
+		else if (mm.getPrefsHelper().isTatacon()) rectType = TouchController.TYPE_TATACON_SYS_RECT;
+		else return; // the normal layout has no copies
+		int imgType = rectType + 1; // the pairs are declared rect, img
+
+		boolean seeded = false;
+		for (int v = IController.BTN_EXIT; v <= IController.BTN_START; v++) {
+			InputValue srcRect = null, srcImg = null, dstRect = null, dstImg = null;
+			for (InputValue iv : values) {
+				if (iv.getValue() != v) continue;
+				if (iv.getType() == TouchController.TYPE_BUTTON_RECT) srcRect = iv;
+				else if (iv.getType() == TouchController.TYPE_BUTTON_IMG) srcImg = iv;
+				else if (iv.getType() == rectType) dstRect = iv;
+				else if (iv.getType() == imgType) dstImg = iv;
+			}
+			seeded |= seedControlState(srcRect, dstRect);
+			seeded |= seedControlState(srcImg, dstImg);
+		}
+		if (seeded) mm.getInputView().updateImages();
+	}
+
+	/**
+	 * Copies position / opacity / visibility / size from src onto dst, one
+	 * property at a time, skipping the ones dst already owns. True when
+	 * anything was copied.
+	 */
+	private boolean seedControlState(InputValue src, InputValue dst) {
+		if (src == null || dst == null) return false;
+		boolean seeded = false;
+
+		if (dst.getXoff() == 0 && dst.getYoff() == 0
+			&& (src.getXoff() != 0 || src.getYoff() != 0)) {
+			dst.setOffset(src.getXoff(), src.getYoff());
+			seeded = true;
+		}
+		if (dst.getAlpha() == -1 && src.getAlpha() >= 0) {
+			dst.setAlpha(src.getAlpha());
+			seeded = true;
+		}
+		if (!dst.isHidden() && src.isHidden()) {
+			dst.setHidden(true);
+			seeded = true;
+		}
+		if (dst.getScaleX() == 1f && dst.getScaleY() == 1f
+			&& (src.getScaleX() != 1f || src.getScaleY() != 1f)) {
+			applyScale(dst, src.getScaleX(), src.getScaleY());
+			seeded = true;
+		}
+		return seeded;
+	}
+
+	/**
 	 * Restores the controls hidden with the customizer's HIDE mode. Stored as
 	 * {@code type,value} pairs, separately from the position offsets; an empty /
 	 * missing list means everything is visible.
@@ -589,9 +674,12 @@ public class ControlCustomizer {
 
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 
-		if (valueMoved.getType() == TouchController.TYPE_BUTTON_RECT) {
+		if (valueMoved.getType() == TouchController.TYPE_BUTTON_RECT
+			|| TouchController.isSystemRectType(valueMoved.getType())) {
+			// The artwork is drawn from the matching image entry.
+			int imgType = artworkTypeFor(valueMoved.getType());
 			for (InputValue iv : values) {
-				if (iv.getType() == TouchController.TYPE_BUTTON_IMG && iv.getValue() == valueMoved.getValue()) {
+				if (iv.getType() == imgType && iv.getValue() == valueMoved.getValue()) {
 					iv.setOffsetTMP(valueMoved.getXoff_tmp(), valueMoved.getYoff_tmp());
 					break;
 				}
@@ -670,6 +758,7 @@ public class ControlCustomizer {
 						initialScaleX = target.getScaleX();
 						initialScaleY = target.getScaleY();
 					}
+					break;
 				} else if (mode == MODE_HIDE) {
 					// Tap a control to hide it; tap it again to bring it back.
 					// Nothing is dragged in this mode.
@@ -681,6 +770,7 @@ public class ControlCustomizer {
 						mm.getInputView().updateImages();
 						mm.getInputView().invalidate();
 					}
+					break;
 				} else {
 					// Move / opacity mode: buttons keep grab priority over the drum.
 					if (findMovable(values, x, y, false) == null) {
@@ -792,11 +882,13 @@ public class ControlCustomizer {
 
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 
-		if (iv.getType() == TouchController.TYPE_BUTTON_RECT) {
-			// The artwork is drawn from the matching TYPE_BUTTON_IMG entry.
+		if (iv.getType() == TouchController.TYPE_BUTTON_RECT
+			|| TouchController.isSystemRectType(iv.getType())) {
+			// The artwork is drawn from the matching image entry.
+			int imgType = artworkTypeFor(iv.getType());
 			iv.setAlpha(alpha);
 			for (InputValue other : values) {
-				if (other.getType() == TouchController.TYPE_BUTTON_IMG && other.getValue() == iv.getValue()) {
+				if (other.getType() == imgType && other.getValue() == iv.getValue()) {
 					other.setAlpha(alpha);
 					break;
 				}
@@ -830,11 +922,13 @@ public class ControlCustomizer {
 
 		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
 
-		if (iv.getType() == TouchController.TYPE_BUTTON_RECT) {
-			// The artwork is drawn from the matching TYPE_BUTTON_IMG entry.
+		if (iv.getType() == TouchController.TYPE_BUTTON_RECT
+			|| TouchController.isSystemRectType(iv.getType())) {
+			// The artwork is drawn from the matching image entry.
+			int imgType = artworkTypeFor(iv.getType());
 			iv.setHidden(hidden);
 			for (InputValue other : values) {
-				if (other.getType() == TouchController.TYPE_BUTTON_IMG && other.getValue() == iv.getValue()) {
+				if (other.getType() == imgType && other.getValue() == iv.getValue()) {
 					other.setHidden(hidden);
 					break;
 				}
@@ -939,7 +1033,8 @@ public class ControlCustomizer {
 				int type = v.getType();
 				int controllerType = mm.getPrefsHelper().getControllerType();
 
-				if (type == TouchController.TYPE_BUTTON_RECT) {
+				if (type == TouchController.TYPE_BUTTON_RECT
+					|| TouchController.isSystemRectType(type)) {
 					draw = true;
 				} else if (controllerType == PrefsHelper.PREF_DIGITAL_DPAD && type == TouchController.TYPE_STICK_RECT) {
 					draw = true;

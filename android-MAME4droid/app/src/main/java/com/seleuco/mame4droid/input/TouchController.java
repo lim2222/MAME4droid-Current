@@ -101,6 +101,21 @@ public class TouchController implements IController {
 	// Hanafuda panel button, same idea; value = index into TouchHanafuda's table.
 	final public static int TYPE_HANAFUDA_IMG = 11;
 
+	// Per panel copies of the system buttons (exit / option / coin / start).
+	// While a panel is on screen it owns these four too, so their position,
+	// size, opacity and visibility are customized - and restored by RESET -
+	// per panel: resetting the mahjong panel never moves the buttons of the
+	// drum, of the hanafuda panel or of the normal layout. The copies draw
+	// the very same artwork, looked up by value in the shared button images,
+	// so no drawable is duplicated. The pairs are declared rect, img, so the
+	// image type of a family is always its rect type + 1.
+	final public static int TYPE_TATACON_SYS_RECT = 12;
+	final public static int TYPE_TATACON_SYS_IMG = 13;
+	final public static int TYPE_MAHJONG_SYS_RECT = 14;
+	final public static int TYPE_MAHJONG_SYS_IMG = 15;
+	final public static int TYPE_HANAFUDA_SYS_RECT = 16;
+	final public static int TYPE_HANAFUDA_SYS_IMG = 17;
+
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
 
@@ -284,7 +299,8 @@ public class TouchController implements IController {
 									mm.getInputHandler().getTouchMahjong().press(mj);
 							}
 						}
-						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT) {
+						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT
+							|| isSystemRectType(iv.getType())) {
 							handled = true;
 
 							switch (actionMasked) {
@@ -292,7 +308,7 @@ public class TouchController implements IController {
 								case MotionEvent.ACTION_POINTER_DOWN:
 								case MotionEvent.ACTION_MOVE:
 
-									if (iv.getType() == TYPE_BUTTON_RECT) {
+									if (iv.getType() == TYPE_BUTTON_RECT || isSystemRectType(iv.getType())) {
 
 										// Prevent cross-talk: Disable Start/Exit while the D-Pad is engaged in portrait
 										if ((iv.getValue() == BTN_START || iv.getValue() == BTN_EXIT) && stick_state != STICK_NONE &&
@@ -425,7 +441,17 @@ public class TouchController implements IController {
 				btnStates[i] = (digital_data[0] & getButtonValue(i, false)) != 0 ? BTN_PRESS_STATE : BTN_NO_PRESS_STATE;
 
 				if (btnStates[iv.getValue()] != old_btnStates[iv.getValue()]) {
-					if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
+					if (pH.isAnimatedInput()) {
+						mm.getInputView().invalidate(iv.getRect());
+						// The active panel draws its own copy of this button and
+						// shares its press state: refresh the copy's rect too.
+						for (InputValue other : values) {
+							if (isSystemImgType(other.getType()) && other.getValue() == iv.getValue()) {
+								mm.getInputView().invalidate(other.getRect());
+								break;
+							}
+						}
+					}
 					if (pH.isVibrate() && btnStates[i] == BTN_PRESS_STATE) wantVibrate = true;
 					old_btnStates[iv.getValue()] = btnStates[iv.getValue()];
 				}
@@ -487,22 +513,28 @@ public class TouchController implements IController {
 			// Only shown while the hanafuda panel is enabled.
 			handle = mm.getPrefsHelper().isHanafuda();
 		}
-		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT ){
+		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT
+			|| isSystemRectType(type) || isSystemImgType(type)) {
 
-			// Taiko mode: the drum replaces the action buttons, only coin /
-			// start / option / exit are kept.
-			if(mm.getPrefsHelper().isTatacon()
-				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
-				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
+			// Taiko / mahjong / hanafuda mode: the panel replaces the action
+			// buttons and the stick, and takes the system buttons over too
+			// with its own copies. The originals step aside, so every panel
+			// owns the position - and the RESET - of its exit / option /
+			// coin / start. Outside the panels the normal layout keeps them.
+			if((mm.getPrefsHelper().isTatacon()
+				|| mm.getPrefsHelper().isMahjong()
+				|| mm.getPrefsHelper().isHanafuda())
+				&& (type == TouchController.TYPE_BUTTON_IMG
+					|| type == TouchController.TYPE_BUTTON_RECT)) {
 				return false;
 			}
 
-			// Mahjong / hanafuda mode: the panel replaces the action buttons and
-			// the stick, only coin / start / option / exit are kept.
-			if((mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda())
-				&& v.getValue() != BTN_EXIT && v.getValue() != BTN_OPTION
-				&& v.getValue() != BTN_START && v.getValue() != BTN_COIN) {
-				return false;
+			// The copies only show while their own panel is on screen.
+			if (isSystemRectType(type) || isSystemImgType(type)) {
+				int family = systemRectFamily(type);
+				if (family == TYPE_TATACON_SYS_RECT && !mm.getPrefsHelper().isTatacon()) return false;
+				if (family == TYPE_MAHJONG_SYS_RECT && !mm.getPrefsHelper().isMahjong()) return false;
+				if (family == TYPE_HANAFUDA_SYS_RECT && !mm.getPrefsHelper().isHanafuda()) return false;
 			}
 
 			if(mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && !Emulator.isPortraitFull()
@@ -575,6 +607,28 @@ public class TouchController implements IController {
 			panelTouches[i] = -1;
 	}
 
+	/** True for the rect piece of a panel's system button copies. */
+	public static boolean isSystemRectType(int type) {
+		return type == TYPE_TATACON_SYS_RECT
+			|| type == TYPE_MAHJONG_SYS_RECT
+			|| type == TYPE_HANAFUDA_SYS_RECT;
+	}
+
+	/** True for the image piece of a panel's system button copies. */
+	public static boolean isSystemImgType(int type) {
+		return type == TYPE_TATACON_SYS_IMG
+			|| type == TYPE_MAHJONG_SYS_IMG
+			|| type == TYPE_HANAFUDA_SYS_IMG;
+	}
+
+	/** Rect type of the panel family a copy belongs to, -1 when it is not one. */
+	public static int systemRectFamily(int type) {
+		if (type == TYPE_TATACON_SYS_RECT || type == TYPE_TATACON_SYS_IMG) return TYPE_TATACON_SYS_RECT;
+		if (type == TYPE_MAHJONG_SYS_RECT || type == TYPE_MAHJONG_SYS_IMG) return TYPE_MAHJONG_SYS_RECT;
+		if (type == TYPE_HANAFUDA_SYS_RECT || type == TYPE_HANAFUDA_SYS_IMG) return TYPE_HANAFUDA_SYS_RECT;
+		return -1;
+	}
+
 	/** True when any loaded control of the given type is hidden in the customizer. */
 	public boolean isControlHidden(int type) {
 		if (values == null) return false;
@@ -594,7 +648,8 @@ public class TouchController implements IController {
 		if (values == null) return false;
 		for (int j = 0; j < values.size(); j++) {
 			InputValue iv = values.get(j);
-			if (iv.getType() == TYPE_BUTTON_RECT && isHandledTouchItem(iv) && iv.getRect().contains(x, y))
+			if ((iv.getType() == TYPE_BUTTON_RECT || isSystemRectType(iv.getType()))
+				&& isHandledTouchItem(iv) && iv.getRect().contains(x, y))
 				return true;
 		}
 		return false;
@@ -680,8 +735,13 @@ public class TouchController implements IController {
 		readInputValues(v, values);
 		fixControllerCoords(values);
 		setButtonsSizes(values);
-		if (mm.getInputHandler().getControlCustomizer() != null)
+		if (mm.getInputHandler().getControlCustomizer() != null) {
 			mm.getInputHandler().getControlCustomizer().readDefinedControlLayout();
+			// The panel's system button copies start from the stored state of
+			// the normal layout's buttons, so existing customizations carry
+			// over untouched until a panel owns its copies.
+			mm.getInputHandler().getControlCustomizer().seedPanelSystemButtons();
+		}
 	}
 
 	protected void readInputValues(int id, ArrayList<InputValue> values) {
@@ -737,6 +797,45 @@ public class TouchController implements IController {
 		}
 		if (mm.getPrefsHelper().isHanafuda()) {
 			mm.getInputHandler().getTouchHanafuda().buildDefaultLayout(values);
+		}
+		buildSystemButtonCopies(values);
+	}
+
+	/**
+	 * While a panel is on screen it owns the system buttons too: this clones
+	 * the exit / option / coin / start entries of the layout file under the
+	 * panel's own types, so their position, size, opacity and visibility are
+	 * customized - and restored by RESET - per panel. The copies draw the very
+	 * same artwork, looked up by value in the shared button images, so no
+	 * drawable is duplicated. The originals stay in the list untouched:
+	 * isHandledTouchItem decides which of the two sets is live, and the
+	 * inactive set is preserved untouched when a layout is saved.
+	 */
+	private void buildSystemButtonCopies(ArrayList<InputValue> values) {
+		int rectType;
+		if (mm.getPrefsHelper().isMahjong()) rectType = TYPE_MAHJONG_SYS_RECT;
+		else if (mm.getPrefsHelper().isHanafuda()) rectType = TYPE_HANAFUDA_SYS_RECT;
+		else if (mm.getPrefsHelper().isTatacon()) rectType = TYPE_TATACON_SYS_RECT;
+		else return; // the normal layout keeps the original buttons
+
+		int imgType = rectType + 1; // the pairs are declared rect, img
+
+		for (int v = BTN_EXIT; v <= BTN_START; v++) {
+			InputValue rect = null;
+			InputValue img = null;
+			for (InputValue iv : values) {
+				if (iv.getValue() != v) continue;
+				if (iv.getType() == TYPE_BUTTON_RECT) rect = iv;
+				else if (iv.getType() == TYPE_BUTTON_IMG) img = iv;
+			}
+			if (rect != null) {
+				Rect r = rect.getOrigRect();
+				values.add(new InputValue(new int[]{ rectType, v, r.left, r.top, r.width(), r.height() }, mm));
+			}
+			if (img != null) {
+				Rect r = img.getOrigRect();
+				values.add(new InputValue(new int[]{ imgType, v, r.left, r.top, r.width(), r.height() }, mm));
+			}
 		}
 	}
 
