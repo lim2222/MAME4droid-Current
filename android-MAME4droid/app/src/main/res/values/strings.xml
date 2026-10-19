@@ -36,6 +36,8 @@
     <string name="opt_change_controller">Change controller</string>
     <string name="opt_edit_layout">Edit layout</string>
     <string name="ctrl_normal">Normal buttons</string>
+    <string name="ctrl_keyboard">Keyboard</string>
+    <string name="opt_hide_touch_controls">Hide touch screen controls</string>
 
     <!-- DialogHelper -->
     <string name="dlg_save_changes">Do you want to save changes?</string>

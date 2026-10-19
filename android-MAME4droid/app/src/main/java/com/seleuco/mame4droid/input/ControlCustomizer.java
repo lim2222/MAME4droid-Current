@@ -110,6 +110,8 @@ public class ControlCustomizer {
 	private Rect resizeButtonRect = new Rect();
 	private Rect opacityButtonRect = new Rect();
 	private Rect hideButtonRect = new Rect();
+	private Rect hideAllButtonRect = new Rect();
+	private Rect showAllButtonRect = new Rect();
 	private Rect resetButtonRect = new Rect();
 	private Paint pButton;
 	private Paint pButtonOff;
@@ -307,7 +309,8 @@ public class ControlCustomizer {
 				isTatacon ||
 				iv.getType() == TouchController.TYPE_ANALOG_RECT ||
 				iv.getType() == TouchController.TYPE_MAHJONG_IMG ||
-				iv.getType() == TouchController.TYPE_HANAFUDA_IMG)
+				iv.getType() == TouchController.TYPE_HANAFUDA_IMG ||
+				iv.getType() == TouchController.TYPE_KEYBOARD_IMG)
 				&& iv.getRect().contains(x, y)) {
 
 				valueMoved = iv;
@@ -489,6 +492,7 @@ public class ControlCustomizer {
 		if (mm.getPrefsHelper().isMahjong()) rectType = TouchController.TYPE_MAHJONG_SYS_RECT;
 		else if (mm.getPrefsHelper().isHanafuda()) rectType = TouchController.TYPE_HANAFUDA_SYS_RECT;
 		else if (mm.getPrefsHelper().isTatacon()) rectType = TouchController.TYPE_TATACON_SYS_RECT;
+		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TouchController.TYPE_KEYBOARD_SYS_RECT;
 		else return; // the normal layout has no copies
 		int imgType = rectType + 1; // the pairs are declared rect, img
 
@@ -734,6 +738,17 @@ public class ControlCustomizer {
 					mm.getInputView().invalidate();
 					return;
 				}
+				if (hideAllButtonRect.contains(x, y)) {
+					// Hides every control of the panel / layout on screen at once.
+					// The usual workflow: HIDE ALL, then tap the few controls (or
+					// keyboard keys) the game actually needs to bring them back.
+					setAllHidden(true);
+					return;
+				}
+				if (showAllButtonRect.contains(x, y)) {
+					setAllHidden(false);
+					return;
+				}
 				if (resetButtonRect.contains(x, y)) {
 					// Puts back the panel currently on screen; immediate, but only
 					// in memory: SAVE writes it, leaving the customizer without
@@ -913,6 +928,26 @@ public class ControlCustomizer {
 	}
 
 	/**
+	 * Hides or shows every control of the layout currently on screen in one go -
+	 * exactly the ones the customizer is editing, so panels that are switched off
+	 * are never touched. HIDE ALL + un-hiding the few controls a game needs is
+	 * the intended workflow for the big on screen keyboard.
+	 */
+	private void setAllHidden(boolean hidden) {
+		ArrayList<InputValue> values = mm.getInputHandler().getTouchController().getAllInputData();
+		if (values == null) return;
+
+		for (InputValue iv : values) {
+			if (!isEditable(iv)) continue;
+			if (iv.isHidden() == hidden) continue;
+			setControlHidden(iv, hidden);
+		}
+
+		mm.getInputView().updateImages();
+		mm.getInputView().invalidate();
+	}
+
+	/**
 	 * Hides or shows a control and everything sharing its artwork. Hidden controls
 	 * are not drawn and do not take touches; they stay visible (dimmed) while the
 	 * customizer is open so they can be brought back.
@@ -1046,6 +1081,8 @@ public class ControlCustomizer {
 					draw = true;
 				} else if (type == TouchController.TYPE_HANAFUDA_IMG) {
 					draw = true;
+				} else if (type == TouchController.TYPE_KEYBOARD_IMG) {
+					draw = true;
 				}
 
 				// Only the controls of the active panel get a hitbox: an invisible
@@ -1058,10 +1095,11 @@ public class ControlCustomizer {
 			}
 		}
 
-		// Modes, RESET and SAVE on a single row along the top edge so they never
-		// sit on top of the controls being edited. RESET works on the panel that
-		// is on screen right now, so one button is enough for every panel.
-		int btnCount = 6;
+		// Modes, HIDE ALL / SHOW ALL, RESET and SAVE on a single row along the top
+		// edge so they never sit on top of the controls being edited. RESET and
+		// the hide buttons work on the panel that is on screen right now, so one
+		// button is enough for every panel.
+		int btnCount = 8;
 		int btnW = Math.min(BUTTON_WIDTH, (canvas.getWidth() - (btnCount + 1) * BUTTON_MARGIN) / btnCount);
 		int totalW = btnW * btnCount + (btnCount - 1) * BUTTON_MARGIN;
 		int startX = (canvas.getWidth() - totalW) / 2;
@@ -1073,13 +1111,17 @@ public class ControlCustomizer {
 		resizeButtonRect.set(startX + step, top, startX + step + btnW, bottom);
 		opacityButtonRect.set(startX + 2 * step, top, startX + 2 * step + btnW, bottom);
 		hideButtonRect.set(startX + 3 * step, top, startX + 3 * step + btnW, bottom);
-		resetButtonRect.set(startX + 4 * step, top, startX + 4 * step + btnW, bottom);
-		saveButtonRect.set(startX + 5 * step, top, startX + 5 * step + btnW, bottom);
+		hideAllButtonRect.set(startX + 4 * step, top, startX + 4 * step + btnW, bottom);
+		showAllButtonRect.set(startX + 5 * step, top, startX + 5 * step + btnW, bottom);
+		resetButtonRect.set(startX + 6 * step, top, startX + 6 * step + btnW, bottom);
+		saveButtonRect.set(startX + 7 * step, top, startX + 7 * step + btnW, bottom);
 
 		drawButton(canvas, moveButtonRect, "MOVE", mode == MODE_MOVE);
 		drawButton(canvas, resizeButtonRect, "RESIZE", mode == MODE_RESIZE);
 		drawButton(canvas, opacityButtonRect, "OPACITY", mode == MODE_OPACITY);
 		drawButton(canvas, hideButtonRect, "HIDE", mode == MODE_HIDE);
+		drawButton(canvas, hideAllButtonRect, "HIDE ALL", false);
+		drawButton(canvas, showAllButtonRect, "SHOW ALL", false);
 		drawButton(canvas, resetButtonRect, "RESET", pButtonWarn);
 		drawButton(canvas, saveButtonRect, "SAVE", true);
 

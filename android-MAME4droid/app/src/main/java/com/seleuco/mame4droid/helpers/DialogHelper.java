@@ -259,11 +259,16 @@ public class DialogHelper {
 				final String sKeyboard = mm.getString(R.string.opt_keyboard);
 				final String sChangeCtrl = mm.getString(R.string.opt_change_controller);
 				final String sEditLayout = mm.getString(R.string.opt_edit_layout);
+				// Quick toggle to take the touch controls off the screen (cleaner
+				// view while playing with a hardware keyboard / gamepad). The state
+				// is part of the label, like a check mark would be.
+				final String sHideTouch = (mm.getPrefsHelper().isHideTouchControls() ? "[ON] " : "[OFF] ")
+					+ mm.getString(R.string.opt_hide_touch_controls);
 
-				CharSequence[] items1 = {sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
-				CharSequence[] items2 = {sHelp, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
-				CharSequence[] items3 = {sExit, sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
-				CharSequence[] items4 = {sExit, sHelp, sNetplay, sChangeCtrl, sEditLayout, sSettings, sKeyboard};
+				CharSequence[] items1 = {sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sHideTouch, sSettings, sKeyboard};
+				CharSequence[] items2 = {sHelp, sNetplay, sChangeCtrl, sEditLayout, sHideTouch, sSettings, sKeyboard};
+				CharSequence[] items3 = {sExit, sHelp, sLoad, sSave, sNetplay, sChangeCtrl, sEditLayout, sHideTouch, sSettings, sKeyboard};
+				CharSequence[] items4 = {sExit, sHelp, sNetplay, sChangeCtrl, sEditLayout, sHideTouch, sSettings, sKeyboard};
 
 				CharSequence[] items = saveload ? (id == DIALOG_OPTIONS ? items1 : items3) : (id == DIALOG_OPTIONS ? items2 : items4);
 
@@ -327,6 +332,14 @@ public class DialogHelper {
 							ControlCustomizer.setEnabled(true);
 							mm.getMainHelper().updateMAME4droid();
 							return;
+						} else if (sHideTouch.equals(choice)) {
+							// Independent of the settings' touch controller visibility:
+							// this only hides the on screen controls (exit / option stay),
+							// it never moves the game screen around.
+							SharedPreferences.Editor editor = mm.getPrefsHelper().getSharedPreferences().edit();
+							editor.putBoolean(PrefsHelper.PREF_HIDE_TOUCH_CONTROLS, !mm.getPrefsHelper().isHideTouchControls());
+							editor.commit();
+							if (mm.getInputView() != null) mm.getInputView().invalidate();
 						} else if (sSettings.equals(choice)) {
 							mm.getMainHelper().showSettings();
 						} else if (sKeyboard.equals(choice)) {
@@ -367,7 +380,7 @@ public class DialogHelper {
 						mm.getString(R.string.pref_tatacon_title),
 						mm.getString(R.string.pref_mahjong_title),
 						mm.getString(R.string.pref_hanafuda_title),
-						"Keyboard"};
+						mm.getString(R.string.ctrl_keyboard)};
 				int ctrlChecked = mm.getPrefsHelper().isMahjong() ? 2
 					: (mm.getPrefsHelper().isHanafuda() ? 3 : (mm.getPrefsHelper().isTatacon() ? 1 : (mm.getPrefsHelper().isKeyboardPanel() ? 4 : 0)));
 				builder.setTitle(mm.getString(R.string.opt_change_controller))

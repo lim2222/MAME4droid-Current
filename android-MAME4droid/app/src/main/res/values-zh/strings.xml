@@ -31,6 +31,8 @@
     <string name="opt_change_controller">切换控制方式</string>
     <string name="opt_edit_layout">编辑布局</string>
     <string name="ctrl_normal">普通按键</string>
+    <string name="ctrl_keyboard">键盘</string>
+    <string name="opt_hide_touch_controls">隐藏触摸屏控制</string>
 
     <string name="dlg_save_changes">要保存更改吗？</string>
     <string name="dlg_roms_message">您想将 ROM 文件存放在哪里？\n\n默认将使用一个空的内部文件夹（但您需要用电脑手动将 ROM 文件复制到那里）。您也可以从外部存储中选择一个包含 ROM 文件的文件夹，下一步需要授权，MAME4droid 才能读取其中的 ROM。\n\n此外，如果您选择外部存储文件夹，卸载应用时您的 ROM 文件不会被删除，您可以使用 Android 文件管理器将 ROM 移动到那里，无需电脑。</string>
