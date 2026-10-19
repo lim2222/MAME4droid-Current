@@ -366,9 +366,10 @@ public class DialogHelper {
 						mm.getString(R.string.ctrl_normal),
 						mm.getString(R.string.pref_tatacon_title),
 						mm.getString(R.string.pref_mahjong_title),
-						mm.getString(R.string.pref_hanafuda_title)};
+						mm.getString(R.string.pref_hanafuda_title),
+						"Keyboard"};
 				int ctrlChecked = mm.getPrefsHelper().isMahjong() ? 2
-					: (mm.getPrefsHelper().isHanafuda() ? 3 : (mm.getPrefsHelper().isTatacon() ? 1 : 0));
+					: (mm.getPrefsHelper().isHanafuda() ? 3 : (mm.getPrefsHelper().isTatacon() ? 1 : (mm.getPrefsHelper().isKeyboardPanel() ? 4 : 0)));
 				builder.setTitle(mm.getString(R.string.opt_change_controller))
 					.setSingleChoiceItems(ctrlItems, ctrlChecked, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int item) {
@@ -376,9 +377,11 @@ public class DialogHelper {
 							boolean enableMahjong = item == 2;
 							boolean enableHanafuda = item == 3;
 							boolean enableTatacon = item == 1;
+							boolean enableKeyboard = item == 4;
 							editor.putBoolean(PrefsHelper.PREF_MAHJONG, enableMahjong);
 							editor.putBoolean(PrefsHelper.PREF_HANAFUDA, enableHanafuda);
 							editor.putBoolean(PrefsHelper.PREF_TATACON, enableTatacon);
+							editor.putBoolean(PrefsHelper.PREF_KEYBOARD_PANEL, enableKeyboard);
 							editor.commit();
 							dialog.dismiss();
 							Emulator.setInOptions(false);
