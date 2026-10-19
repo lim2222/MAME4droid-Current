@@ -245,6 +245,13 @@ public class TouchConsole implements IController {
      */
     private static final float PAD_SIZE_SCALE = 0.8f;
 
+    /**
+     * How far the system-button rows of the full-screen portrait layout were
+     * raised (see controller_portrait_full.txt). The panel's own start /
+     * select follow by the same amount so the four buttons stay in step.
+     */
+    private static final int PORTRAIT_START_SELECT_RAISE = 15;
+
     /* ---- state ----------------------------------------------------------- */
 
     protected MAME4droid mm = null;
@@ -743,8 +750,12 @@ public class TouchConsole implements IController {
         // Buttons.
         for (int i = 0; i < PAD_COUNT && i < buttons.length; i++) {
             float[] k = buttons[i];
+            int top = Math.round((k[1] - k[3]) * mh);
+            if (portrait && (i == PAD_START || i == PAD_SELECT)) {
+                top -= PORTRAIT_START_SELECT_RAISE;
+            }
             int[] bd = { TouchController.TYPE_CONSOLE_IMG, i,
-                Math.round((k[0] - k[2]) * mw), Math.round((k[1] - k[3]) * mh),
+                Math.round((k[0] - k[2]) * mw), top,
                 Math.max(1, Math.round(2f * k[2] * mw)),
                 Math.max(1, Math.round(2f * k[3] * mh)) };
             values.add(new InputValue(bd, mm));
