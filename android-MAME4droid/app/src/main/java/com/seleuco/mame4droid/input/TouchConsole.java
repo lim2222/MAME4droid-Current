@@ -48,6 +48,7 @@ import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
+import android.view.KeyEvent;
 
 import com.seleuco.mame4droid.Emulator;
 import com.seleuco.mame4droid.MAME4droid;
@@ -91,9 +92,10 @@ import java.util.ArrayList;
  *       input of this panel.</li>
  * </ul>
  *
- * Button inputs (MAME only has 8 game buttons, so L3 / R3 repeat L1 / R1):
- * A -&gt; button 1, B -&gt; 2, Y -&gt; 3, X -&gt; 4, L1 -&gt; 5, R1 -&gt; 6,
- * L2 -&gt; 7, R2 -&gt; 8, start -&gt; start, select -&gt; coin. The artwork
+ * Button inputs: A -&gt; button 1, B -&gt; 2, Y -&gt; 3, X -&gt; 4, L1 -&gt; 5,
+ * R1 -&gt; 6, L2 -&gt; 7, R2 -&gt; 8, start -&gt; start, select -&gt; coin. L3 / R3
+ * send no MAME bit: they press the keyboard keys b / n (MAME's default
+ * P1 buttons 9 / 10) through {@link TouchKeyboard}. The artwork
  * is the Nintendo diamond (A bottom, B right, Y top, X left). Buttons send
  * their bits through the shared digital state like the normal action
  * buttons, so pressed visuals, haptics, exit / option routing and the
@@ -159,22 +161,6 @@ public class TouchConsole implements IController {
         { 0.160000f, 0.620000f, 0.030210f, 0.053700f },
     };
 
-    /** The 4 arm artworks of the portrait d-pad as fractions of the union rect ({ left, top, right, bottom }), order left, right, up, down, so they follow the pad when it is moved or resized. */
-    private static final float[][] PORTRAIT_DPAD_ARMS = {
-        { 0.000000f, 0.314607f, 0.496855f, 0.685393f },
-        { 0.503145f, 0.314607f, 1.000000f, 0.685393f },
-        { 0.308176f, 0.000000f, 0.691824f, 0.494382f },
-        { 0.308176f, 0.505618f, 0.691824f, 1.000000f },
-    };
-
-    /** Same for the landscape overlay. */
-    private static final float[][] LANDSCAPE_DPAD_ARMS = {
-        { 0.000000f, 0.303174f, 0.472518f, 0.696797f },
-        { 0.527482f, 0.303174f, 1.000000f, 0.696797f },
-        { 0.296709f, 0.000000f, 0.703291f, 0.457447f },
-        { 0.296709f, 0.542553f, 0.703291f, 1.000000f },
-    };
-
     /** The analog sticks of the portrait overlay: background circle { cx, cy, rx, ry } plus the pad artwork size as a fraction of the background (RetroArch pad radius / background radius). */
     private static final float[][] PORTRAIT_STICKS = {
         { 0.320000f, 0.920000f, 0.121850f, 0.070000f, 0.762905f, 0.764857f },
@@ -223,16 +209,28 @@ public class TouchConsole implements IController {
     public static final int PAD_START = 10;
     public static final int PAD_SELECT = 11;
 
-    /** MAME input bit every button sends (L3 / R3 repeat L1 / R1). */
+    /**
+     * MAME input bit every button sends. L3 / R3 send no bit at all: they
+     * trigger the keyboard keys b / n (MAME's default P1 button 9 / 10),
+     * see {@link #getKeyButton(int)}.
+     */
     private static final int[] PAD_BITS = {
         BTN1_VALUE, BTN2_VALUE, BTN3_VALUE, BTN4_VALUE,
         BTN5_VALUE, BTN6_VALUE, BTN7_VALUE, BTN8_VALUE,
-        BTN5_VALUE, BTN6_VALUE, START_VALUE, COIN_VALUE,
+        0, 0, START_VALUE, COIN_VALUE,
     };
 
-    /** The 4 d-pad arm artworks: left, right, up, down. */
-    private static final int[] ARM_IMAGE = {
-        R.drawable.co_dpad_left, R.drawable.co_dpad_right, R.drawable.co_dpad_up, R.drawable.co_dpad_down
+    /**
+     * The 9 d-pad artworks, indexed by the shared stick state
+     * ({@link IController} STICK_NONE ... STICK_DOWN_RIGHT): the pad draws
+     * exactly like the normal d-pad, the artwork swap is the press feedback.
+     */
+    private static final int[] DPAD_IMAGE = {
+        R.drawable.co_dpad_none, R.drawable.co_dpad_up_left,
+        R.drawable.co_dpad_up, R.drawable.co_dpad_up_right,
+        R.drawable.co_dpad_left, R.drawable.co_dpad_right,
+        R.drawable.co_dpad_down_left, R.drawable.co_dpad_down,
+        R.drawable.co_dpad_down_right,
     };
 
     /** Alpha used to draw a hidden control while the customizer is open. */
@@ -255,7 +253,7 @@ public class TouchConsole implements IController {
 
     /** Artwork / geometry / opacity pushed by InputView.updateImages(). */
     private final BitmapDrawable[] padImages = new BitmapDrawable[PAD_COUNT];
-    private final BitmapDrawable[] armImages = new BitmapDrawable[4];
+    private final BitmapDrawable[] dpadImages = new BitmapDrawable[DPAD_IMAGE.length];
     private BitmapDrawable bgImage = null;
     private BitmapDrawable stickPadImage = null;
 
@@ -269,8 +267,6 @@ public class TouchConsole implements IController {
     private final float[][] stickPadRatio = {
         { 0f, 0f }, { 0f, 0f }
     };
-    /** Arm fractions of the union rect, for the current orientation. */
-    private float[][] activeArms = PORTRAIT_DPAD_ARMS;
     /** The 8 cfg touch zones as fractions of the union rect ({cx,cy,rx,ry}). */
     private final float[][] activeZones = {
         new float[4], new float[4], new float[4], new float[4],
@@ -278,6 +274,10 @@ public class TouchConsole implements IController {
     };
     /** Zone order of the cfg tables to getStickValue sectors (L,R,U,D,UL,UR,DL,DR). */
     private static final int[] DPAD_ZONE_SECTORS = { 4, 5, 2, 7, 1, 3, 6, 8 };
+
+    /** Cached TouchKeyboard key indices of the key buttons, -1 = none yet. */
+    private int l3Key = -1;
+    private int r3Key = -1;
 
     /** Pointer ownership of the analog sticks, -1 = free. */
     private final int[] stickOwner = { -1, -1 };
@@ -314,6 +314,32 @@ public class TouchConsole implements IController {
         if (bits == BTN3_VALUE && mm != null && mm.getPrefsHelper().isBplusX())
             bits |= BTN2_VALUE | BTN1_VALUE;
         return bits;
+    }
+
+    /**
+     * TouchKeyboard key index a pad button triggers instead of a digital
+     * bit: L3 / R3 send the keyboard keys b / n, MAME's default P1 button
+     * 9 / 10. -1 for the plain digital buttons.
+     */
+    public int getKeyButton(int padIndex) {
+        if (padIndex != PAD_L3 && padIndex != PAD_R3) return -1;
+        if (l3Key < 0) {
+            l3Key = TouchKeyboard.indexOfKeyCode(KeyEvent.KEYCODE_B);
+            r3Key = TouchKeyboard.indexOfKeyCode(KeyEvent.KEYCODE_N);
+        }
+        return padIndex == PAD_L3 ? l3Key : r3Key;
+    }
+
+    /**
+     * Repaints the pad button that sends the given key so its pressed
+     * (shrunk) state follows the keyboard key it triggers. No-op for every
+     * key that is not one of this panel's (L3 / R3).
+     */
+    public void invalidateKeyButton(int kbd) {
+        if (kbd < 0 || mm == null || mm.getInputView() == null) return;
+        int pad = kbd == getKeyButton(PAD_L3) ? PAD_L3
+            : kbd == getKeyButton(PAD_R3) ? PAD_R3 : -1;
+        if (pad >= 0 && padRects[pad] != null) mm.getInputView().invalidate(padRects[pad]);
     }
 
     /**
@@ -437,7 +463,8 @@ public class TouchConsole implements IController {
         float dy = oy - stickOY[idx];
         stickOX[idx] = ox;
         stickOY[idx] = oy;
-        if (dx * dx + dy * dy >= 0.0025f // ~5% of travel
+        // Redraw threshold like the normal analog stick (~8% of travel).
+        if (dx * dx + dy * dy >= 0.0064f
             && mm.getPrefsHelper().isAnimatedInput() && mm.getInputView() != null) {
             mm.getInputView().invalidate(stickRects[idx]);
         }
@@ -461,12 +488,12 @@ public class TouchConsole implements IController {
         return img;
     }
 
-    private BitmapDrawable armImageFor(int arm) {
-        if (arm < 0 || arm >= armImages.length || mm == null) return null;
-        BitmapDrawable img = armImages[arm];
+    private BitmapDrawable dpadImageFor(int state) {
+        if (state < 0 || state >= dpadImages.length || mm == null) return null;
+        BitmapDrawable img = dpadImages[state];
         if (img == null) {
-            img = (BitmapDrawable) mm.getResources().getDrawable(ARM_IMAGE[arm], null);
-            armImages[arm] = img;
+            img = (BitmapDrawable) mm.getResources().getDrawable(DPAD_IMAGE[state], null);
+            dpadImages[state] = img;
         }
         return img;
     }
@@ -504,7 +531,6 @@ public class TouchConsole implements IController {
             dpadRect.set(v.getRect());
             dpadAlpha = alpha;
             boolean por = portrait();
-            activeArms = por ? PORTRAIT_DPAD_ARMS : LANDSCAPE_DPAD_ARMS;
             // The 8 cfg zones as fractions of the zone union (this entry's
             // rect), so the touch shape follows a moved / resized pad.
             // The zones hug the artwork: the blank corners of the bounding
@@ -526,7 +552,7 @@ public class TouchConsole implements IController {
                 activeZones[i][2] = zones[i][2] / uw;
                 activeZones[i][3] = zones[i][3] / uh;
             }
-            for (int i = 0; i < armImages.length; i++) armImageFor(i);
+            for (int i = 0; i < dpadImages.length; i++) dpadImageFor(i);
         } else if (type == TouchController.TYPE_CONSOLE_STICK) {
             int i = v.getValue();
             if (i < 0 || i >= STICK_COUNT) return;
@@ -549,8 +575,8 @@ public class TouchConsole implements IController {
     /**
      * Draws one button. A press shrinks it slightly around its centre; the
      * pressed state comes from the shared digital button states, exactly
-     * like for the normal action buttons (L3 shares L1's bit, so it lights
-     * with it - they send the same input).
+     * like for the normal action buttons. L3 / R3 send keyboard keys
+     * instead of bits, so they read their state from the keyboard.
      */
     public void drawButton(Canvas canvas, int value) {
         if (value < 0 || value >= PAD_COUNT) return;
@@ -559,9 +585,15 @@ public class TouchConsole implements IController {
         BitmapDrawable img = imageFor(value);
         if (img == null) return;
 
-        TouchController tc = touchController();
-        boolean pressed = tc != null
-            && tc.getBtnStates()[value] == BTN_PRESS_STATE;
+        int kbd = getKeyButton(value);
+        boolean pressed;
+        if (kbd >= 0) {
+            pressed = mm.getInputHandler().getTouchKeyboard().isPressed(kbd);
+        } else {
+            TouchController tc = touchController();
+            pressed = tc != null
+                && tc.getBtnStates()[value] == BTN_PRESS_STATE;
+        }
         if (pressed) {
             tmpRect.set(r);
             tmpRect.inset((int) (r.width() * 0.06f), (int) (r.height() * 0.06f));
@@ -574,68 +606,31 @@ public class TouchConsole implements IController {
     }
 
     /**
-     * Draws the d-pad: the 4 arm artworks at their cfg-relative fractions of
-     * the single union rect, so they follow the pad on every move / resize.
-     * An engaged direction shrinks and dims its arm, like a pressed button.
-     * Engaged arms are drawn in a second pass on top: their frames overlap
-     * the neighbours at the diagonals, and the neighbour artwork would
-     * otherwise sit over the shrunken arm and mask (or fake) the effect.
+     * Draws the d-pad exactly like the normal d-pad: one of the nine
+     * direction artworks (chosen by the shared stick state) at the
+     * control's rect with its opacity - the artwork swap itself is the
+     * press feedback, no per-arm shrinking or dimming.
      */
     public void drawDpad(Canvas canvas) {
         if (dpadRect.width() <= 0 || dpadRect.height() <= 0) return;
 
         int state = touchController() == null
             ? STICK_NONE : touchController().getStick_state();
+        BitmapDrawable img = dpadImageFor(state);
+        if (img == null) return;
 
-        for (int pass = 0; pass < 2; pass++) {
-            for (int arm = 0; arm < 4; arm++) {
-                boolean pressed = armPressed(state, arm);
-                if (pressed != (pass == 1)) continue;
-
-                BitmapDrawable img = armImageFor(arm);
-                if (img == null) continue;
-                float[] rel = activeArms != null && arm < activeArms.length
-                    ? activeArms[arm] : null;
-                if (rel == null) continue;
-
-                int l = dpadRect.left + Math.round(rel[0] * dpadRect.width());
-                int t = dpadRect.top + Math.round(rel[1] * dpadRect.height());
-                int rr = dpadRect.left + Math.round(rel[2] * dpadRect.width());
-                int b = dpadRect.top + Math.round(rel[3] * dpadRect.height());
-
-                if (pressed) {
-                    tmpRect.set(l, t, rr, b);
-                    tmpRect.inset((int) (tmpRect.width() * 0.12f),
-                        (int) (tmpRect.height() * 0.12f));
-                    img.setBounds(tmpRect);
-                    img.setAlpha(dpadAlpha * 150 / 255);
-                } else {
-                    img.setBounds(l, t, rr, b);
-                    img.setAlpha(dpadAlpha);
-                }
-                img.draw(canvas);
-            }
-        }
-    }
-
-    /** Whether direction {@code state} lights the arm 0 = left ... 3 = down. */
-    private static boolean armPressed(int state, int arm) {
-        switch (arm) {
-            case 0: return state == STICK_UP_LEFT || state == STICK_LEFT
-                || state == STICK_DOWN_LEFT;
-            case 1: return state == STICK_UP_RIGHT || state == STICK_RIGHT
-                || state == STICK_DOWN_RIGHT;
-            case 2: return state == STICK_UP_LEFT || state == STICK_UP
-                || state == STICK_UP_RIGHT;
-            default: return state == STICK_DOWN_LEFT || state == STICK_DOWN
-                || state == STICK_DOWN_RIGHT;
-        }
+        img.setBounds(dpadRect);
+        img.setAlpha(dpadAlpha);
+        img.draw(canvas);
     }
 
     /**
-     * Draws one analog stick: the background circle at the control's rect
-     * and the pad artwork offset towards the finger (clamped so it always
-     * stays inside the background).
+     * Draws one analog stick exactly like the normal analog stick: the
+     * background circle at the control's rect and the pad artwork centred
+     * under the finger, clamped so it never leaves the background. The axes
+     * are already the unit-disc-clamped values the emulator gets, so the
+     * pad sits exactly on the (clamped) touch point and is centred while
+     * the finger stays inside the dead zone.
      */
     public void drawStick(Canvas canvas, int value) {
         if (value < 0 || value >= STICK_COUNT) return;
@@ -653,10 +648,8 @@ public class TouchConsole implements IController {
         float ratioY = (stickPadRatio[value][1] > 0f ? stickPadRatio[value][1] : 0.75f) * PAD_SIZE_SCALE;
         int pw = Math.max(1, Math.round(r.width() * ratioX));
         int ph = Math.max(1, Math.round(r.height() * ratioY));
-        int maxDx = Math.max(0, (r.width() - pw) / 2);
-        int maxDy = Math.max(0, (r.height() - ph) / 2);
-        int cx = r.centerX() + Math.round(stickOX[value] * maxDx);
-        int cy = r.centerY() + Math.round(stickOY[value] * maxDy);
+        int cx = r.centerX() + Math.round(stickOX[value] * r.width() / 2f);
+        int cy = r.centerY() + Math.round(stickOY[value] * r.height() / 2f);
         int l = Math.max(r.left, Math.min(cx - pw / 2, r.right - pw));
         int t = Math.max(r.top, Math.min(cy - ph / 2, r.bottom - ph));
 
@@ -671,7 +664,7 @@ public class TouchConsole implements IController {
             padImages[i] = null;
             padRects[i] = null;
         }
-        for (int i = 0; i < armImages.length; i++) armImages[i] = null;
+        for (int i = 0; i < dpadImages.length; i++) dpadImages[i] = null;
         bgImage = null;
         stickPadImage = null;
     }

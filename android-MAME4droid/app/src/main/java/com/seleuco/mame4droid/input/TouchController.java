@@ -343,6 +343,45 @@ public class TouchController implements IController {
 							// belongs to one button (the cfg's rects are tangent
 							// squares, their corners slightly overlap).
 							handled = true;
+							int kbd = mm.getInputHandler().getTouchConsole().getKeyButton(iv.getValue());
+							if (kbd >= 0) {
+								// L3 / R3 send keyboard keys (MAME P1 button 9 /
+								// 10, keys b / n) instead of digital bits. The
+								// pointer owns the key like on the keyboard
+								// panel: pressed on entry, released on the next
+								// control it reaches or when the finger lifts.
+								switch (actionMasked) {
+									case MotionEvent.ACTION_DOWN:
+									case MotionEvent.ACTION_POINTER_DOWN:
+									case MotionEvent.ACTION_MOVE:
+										// Any bits this finger carried from a
+										// control it slid off are released
+										// (masked while another finger holds
+										// them too).
+										boolean really = true;
+										for (int k = 0; k < MAX_FINGERS && really; k++) {
+											if (k == id) continue;
+											really = (newtouches[k] & oldtouches[id]) == 0;
+										}
+										if (really) digital_data[0] &= ~(oldtouches[id]);
+										newtouches[id] = 0;
+										oldtouches[id] = 0;
+										if (panelTouches[id] != kbd) {
+											if (panelTouches[id] != -1)
+												releasePanelKey(panelTouches[id]);
+											panelTouches[id] = kbd;
+											mm.getInputHandler().getTouchKeyboard().press(kbd);
+										}
+									break;
+								}
+							break;
+							}
+							// A finger that slid onto this button from a key
+							// button (L3 / R3) releases the key it held.
+							if (panelTouches[id] != -1) {
+								releasePanelKey(panelTouches[id]);
+								panelTouches[id] = -1;
+							}
 							switch (actionMasked) {
 								case MotionEvent.ACTION_DOWN:
 								case MotionEvent.ACTION_POINTER_DOWN:
@@ -366,6 +405,12 @@ public class TouchController implements IController {
 							// rect picks the direction (way restriction of the
 							// settings applies, like on the normal stick).
 							handled = true;
+							// A finger that slid onto the pad from a key button
+							// (L3 / R3) releases the key it held.
+							if (panelTouches[id] != -1) {
+								releasePanelKey(panelTouches[id]);
+								panelTouches[id] = -1;
+							}
 							switch (actionMasked) {
 								case MotionEvent.ACTION_DOWN:
 								case MotionEvent.ACTION_POINTER_DOWN:
@@ -385,6 +430,12 @@ public class TouchController implements IController {
 							handled = true;
 							mm.getInputHandler().getTouchConsole().updateStick(iv, id, x, y);
 							if (mm.getInputHandler().getTouchConsole().handlesPointer(id)) {
+								// A finger that slid onto the stick from a key
+								// button (L3 / R3) releases the key it held.
+								if (panelTouches[id] != -1) {
+									releasePanelKey(panelTouches[id]);
+									panelTouches[id] = -1;
+								}
 								// The stick owns the pointer now: drop the d-pad
 								// bits a finger left behind when it slid off the
 								// pad onto the stick, or an arm stays lit alone.
@@ -471,7 +522,14 @@ public class TouchController implements IController {
 		// soon as the finger is off it.
 		if (mm.getPrefsHelper().isConsolePanel()) {
 			for (int i = 0; i < MAX_FINGERS; i++) {
-				if (!touchstates[i] || ptrHit[i] || newtouches[i] == 0) continue;
+				if (!touchstates[i] || ptrHit[i]) continue;
+				// A finger over no control also releases the key button it
+				// held (L3 / R3).
+				if (panelTouches[i] != -1) {
+					releasePanelKey(panelTouches[i]);
+					panelTouches[i] = -1;
+				}
+				if (newtouches[i] == 0) continue;
 				boolean really = true;
 				for (int j = 0; j < MAX_FINGERS && really; j++) {
 					if (j == i) continue;

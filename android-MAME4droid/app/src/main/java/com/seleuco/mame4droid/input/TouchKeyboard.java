@@ -464,6 +464,14 @@ public class TouchKeyboard implements IController {
         return KEY_CODE[index];
     }
 
+    /** Index of the key carrying the given Android keycode, -1 if none. */
+    public static int indexOfKeyCode(int keyCode) {
+        for (int i = 0; i < BUTTON_COUNT; i++) {
+            if (KEY_CODE[i] == keyCode) return i;
+        }
+        return -1;
+    }
+
     public static int getImageRes(int index) {
         if (index < 0 || index >= BUTTON_COUNT) return 0;
         return IMAGE_RES[index];
@@ -550,6 +558,7 @@ public class TouchKeyboard implements IController {
 
         sendKey(index, true);
         if (art) repaintAll(); else repaint(index);
+        invalidateConsoleKeyCopy(index);
 
         TouchController tc = touchController();
         if (tc != null) tc.fireHaptic();
@@ -568,6 +577,7 @@ public class TouchKeyboard implements IController {
             pressed[index] = false;
             sendKey(index, false);
             if (art) repaintAll(); else repaint(index);
+            invalidateConsoleKeyCopy(index);
             return;
         }
 
@@ -584,6 +594,7 @@ public class TouchKeyboard implements IController {
                 pressed[idx] = false;
                 sendKey(idx, false);
                 if (art) repaintAll(); else repaint(idx);
+                invalidateConsoleKeyCopy(idx);
             }
         }, MIN_HOLD_MS - elapsed);
     }
@@ -620,6 +631,17 @@ public class TouchKeyboard implements IController {
     private void repaintAll() {
         if (mm == null || mm.getInputView() == null) return;
         mm.getInputView().postInvalidate();
+    }
+
+    /**
+     * The console panel's L3 / R3 copies of a key follow this class's
+     * keyboard state: they draw their pressed (shrunk) state from it, not
+     * from the digital button bits. No-op for every key that is not one of
+     * those copies.
+     */
+    private void invalidateConsoleKeyCopy(int index) {
+        if (mm == null || mm.getInputHandler() == null) return;
+        mm.getInputHandler().getTouchConsole().invalidateKeyButton(index);
     }
 
     /**
