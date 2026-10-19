@@ -74,45 +74,21 @@ import java.util.ArrayList;
  * taps are not lost.
  */
  */
-public class TouchHanafuda implements IController {
+public class TouchKeyboard implements IController {
 
     /* ---- button table ---------------------------------------------------- */
 
-    /** Number of hanafuda buttons. */
-    public static final int BUTTON_COUNT = 22;
+    /** Number of keyboard keys. */
+    public static final int BUTTON_COUNT = 101;
 
-    /** Preset layout groups: row 1 = cards A..H, row 2 = actions, row 3 = rest. */
-    private static final int TILES_COUNT = 8;
-    private static final int ACTIONS_COUNT = 9;
-    private static final int EXTRAS_COUNT = BUTTON_COUNT - TILES_COUNT - ACTIONS_COUNT;
+    // TODO: fill IMAGE_RES and KEY_CODE arrays to match retroarch pc_* mapping
+    // using pc_* drawables where available; layout will use retroarch coords for defaults
 
-    /** Drawable of every button, indexed by the layout value. */
-    private static final int[] IMAGE_RES = {
-        // 0..7 - cards A..H (Hanafuda A..H)
-        R.drawable.hf_a, R.drawable.hf_b, R.drawable.hf_c, R.drawable.hf_d,
-        R.drawable.hf_e, R.drawable.hf_f, R.drawable.hf_g, R.drawable.hf_h,
-        // 8..16 - actions: flipflop first, bet and start closing the row
-        R.drawable.hf_flipflop_y, R.drawable.hf_yes_m, R.drawable.hf_no_n,
-        R.drawable.hf_doubleup_rshift, R.drawable.hf_big_enter, R.drawable.hf_small_backspace,
-        R.drawable.hf_take_rcontrol, R.drawable.hf_bet_3, R.drawable.hf_start_1,
-        // 17..21 - everything else
-        R.drawable.hf_keyin_q, R.drawable.hf_keyout_w, R.drawable.hf_bookkeeping_0,
-        R.drawable.hf_memoryreset_f1, R.drawable.hf_test_f2
-    };
+    /** Drawable of every button, indexed by the layout value (placeholder). */
+    private static final int[] IMAGE_RES = new int[BUTTON_COUNT];
 
-    /** Android key code sent by every button, indexed by the layout value. */
-    private static final int[] KEY_CODE = {
-        // 0..7 - cards A..H
-        KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_B, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_D,
-        KeyEvent.KEYCODE_E, KeyEvent.KEYCODE_F, KeyEvent.KEYCODE_G, KeyEvent.KEYCODE_H,
-        // 8..16 - flipflop, yes, no, double up, big, small, take, bet, start
-        KeyEvent.KEYCODE_Y, KeyEvent.KEYCODE_M, KeyEvent.KEYCODE_N,
-        KeyEvent.KEYCODE_SHIFT_RIGHT, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL,
-        KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_1,
-        // 17..21 - key in, key out, bookkeeping, memory reset, test
-        KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_W, KeyEvent.KEYCODE_0,
-        KeyEvent.KEYCODE_F1, KeyEvent.KEYCODE_F2
-    };
+    /** Android key code sent by every button, indexed by the layout value (placeholder). */
+    private static final int[] KEY_CODE = new int[BUTTON_COUNT];
 
     /**
      * Minimum time a key stays down. MAME's keyboard state is polled once per
