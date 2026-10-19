@@ -271,6 +271,13 @@ public class TouchConsole implements IController {
     };
     /** Arm fractions of the union rect, for the current orientation. */
     private float[][] activeArms = PORTRAIT_DPAD_ARMS;
+    /** The 8 cfg touch zones as fractions of the union rect ({cx,cy,rx,ry}). */
+    private final float[][] activeZones = {
+        new float[4], new float[4], new float[4], new float[4],
+        new float[4], new float[4], new float[4], new float[4]
+    };
+    /** Zone order of the cfg tables to getStickValue sectors (L,R,U,D,UL,UR,DL,DR). */
+    private static final int[] DPAD_ZONE_SECTORS = { 4, 5, 2, 7, 1, 3, 6, 8 };
 
     /** Pointer ownership of the analog sticks, -1 = free. */
     private final int[] stickOwner = { -1, -1 };
@@ -310,35 +317,28 @@ public class TouchConsole implements IController {
     }
 
     /**
-     * Direction bits for a touch inside the d-pad's rect. The angle is cut
-     * into the same 8 sectors the normal stick uses (0 = down, growing
-     * towards 90 = right), then the way restriction of the settings is
-     * applied by TouchController.getStickValue(), so a 2 / 4-way machine or
-     * the menu never sees diagonals.
+     * Direction bits for a touch inside the d-pad's rect. The 8 cfg zones
+     * are hit-tested as fractions of the control's rect (so a moved /
+     * resized pad keeps its touch shape): the zones hug the artwork, a
+     * touch in the blank corners of the bounding box - outside every zone -
+     * is no direction at all, so the pad no longer lights an arm from
+     * touches in the empty space around it. The way restriction of the
+     * settings is applied by TouchController.getStickValue(), so a 2 /
+     * 4-way machine or the menu never sees diagonals.
      */
     public int getDpadBits(int x, int y, Rect r) {
         if (r == null || r.width() <= 0 || r.height() <= 0) return 0;
 
-        float rx = (x - r.centerX()) / (r.width() / 2f);
-        float ry = (y - r.centerY()) / (r.height() / 2f);
-        if (rx == 0f && ry == 0f) return 0; // dead centre: no direction
-
-        // 0 = down, 90 = right, 180 = up, 270 = left (TouchStick convention).
-        float ang = 90f - (float) Math.toDegrees(Math.atan2(ry, rx));
-        ang = ((ang % 360f) + 360f) % 360f;
-
-        int sector;
-        if (ang >= 330f || ang < 30f) sector = 7;      // down
-        else if (ang < 60f) sector = 8;                // down right
-        else if (ang < 120f) sector = 5;               // right
-        else if (ang < 150f) sector = 3;               // up right
-        else if (ang < 210f) sector = 2;               // up
-        else if (ang < 240f) sector = 1;               // up left
-        else if (ang < 300f) sector = 4;               // left
-        else sector = 6;                               // down left
-
-        TouchController tc = touchController();
-        return tc == null ? 0 : tc.getStickValue(sector);
+        float fx = (x - r.left) / (float) r.width();
+        float fy = (y - r.top) / (float) r.height();
+        for (int i = 0; i < activeZones.length; i++) {
+            float[] z = activeZones[i];
+            if (Math.abs(fx - z[0]) <= z[2] && Math.abs(fy - z[1]) <= z[3]) {
+                TouchController tc = touchController();
+                return tc == null ? 0 : tc.getStickValue(DPAD_ZONE_SECTORS[i]);
+            }
+        }
+        return 0;
     }
 
     /* ---- analog sticks ---------------------------------------------------- */
@@ -503,7 +503,29 @@ public class TouchConsole implements IController {
         } else if (type == TouchController.TYPE_CONSOLE_DPAD) {
             dpadRect.set(v.getRect());
             dpadAlpha = alpha;
-            activeArms = portrait() ? PORTRAIT_DPAD_ARMS : LANDSCAPE_DPAD_ARMS;
+            boolean por = portrait();
+            activeArms = por ? PORTRAIT_DPAD_ARMS : LANDSCAPE_DPAD_ARMS;
+            // The 8 cfg zones as fractions of the zone union (this entry's
+            // rect), so the touch shape follows a moved / resized pad.
+            // The zones hug the artwork: the blank corners of the bounding
+            // box stay dead instead of lighting an arm by themselves.
+            float[][] zones = por ? PORTRAIT_DPAD : LANDSCAPE_DPAD;
+            float ux1 = Float.MAX_VALUE, uy1 = Float.MAX_VALUE;
+            float ux2 = -Float.MAX_VALUE, uy2 = -Float.MAX_VALUE;
+            for (float[] z : zones) {
+                ux1 = Math.min(ux1, z[0] - z[2]);
+                uy1 = Math.min(uy1, z[1] - z[3]);
+                ux2 = Math.max(ux2, z[0] + z[2]);
+                uy2 = Math.max(uy2, z[1] + z[3]);
+            }
+            float uw = Math.max(1e-6f, ux2 - ux1);
+            float uh = Math.max(1e-6f, uy2 - uy1);
+            for (int i = 0; i < activeZones.length && i < zones.length; i++) {
+                activeZones[i][0] = (zones[i][0] - ux1) / uw;
+                activeZones[i][1] = (zones[i][1] - uy1) / uh;
+                activeZones[i][2] = zones[i][2] / uw;
+                activeZones[i][3] = zones[i][3] / uh;
+            }
             for (int i = 0; i < armImages.length; i++) armImageFor(i);
         } else if (type == TouchController.TYPE_CONSOLE_STICK) {
             int i = v.getValue();

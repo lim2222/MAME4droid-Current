@@ -78,6 +78,8 @@ public class TouchController implements IController {
 	protected static int[] newtouches = new int[MAX_FINGERS];
 	protected static int[] oldtouches = new int[MAX_FINGERS];
 	protected static boolean[] touchstates = new boolean[MAX_FINGERS];
+	/** Per-event: this pointer landed on one of the live controls. */
+	private boolean[] ptrHit = new boolean[MAX_FINGERS];
 
 	// Mahjong / hanafuda panel: which button each pointer is holding, -1 when the
 	// pointer is not on the panel. Needed so a lifted finger releases exactly its
@@ -267,6 +269,7 @@ public class TouchController implements IController {
 		// Reset state trackers for the current frame iteration
 		for (int i = 0; i < MAX_FINGERS; i++) {
 			touchstates[i] = false;
+			ptrHit[i] = false;
 			oldtouches[i] = newtouches[i];
 		}
 
@@ -314,6 +317,7 @@ public class TouchController implements IController {
 
 					// AABB Collision check against UI layout rects
 					if (iv.getRect().contains(x, y) && isHandledTouchItem(iv)) {
+						ptrHit[id] = true;
 
 						if (iv.getType() == TYPE_MAHJONG_IMG || iv.getType() == TYPE_HANAFUDA_IMG
 							|| iv.getType() == TYPE_KEYBOARD_IMG) {
@@ -343,6 +347,11 @@ public class TouchController implements IController {
 								case MotionEvent.ACTION_DOWN:
 								case MotionEvent.ACTION_POINTER_DOWN:
 								case MotionEvent.ACTION_MOVE:
+								// A finger that slid off the d-pad onto this button
+								// must not keep carrying the pad's direction bits: the
+								// |= below would re-apply them and leave an arm lit
+								// by itself while the finger is elsewhere.
+									newtouches[id] &= ~(UP_VALUE | DOWN_VALUE | LEFT_VALUE | RIGHT_VALUE);
 									newtouches[id] |= mm.getInputHandler().getTouchConsole().getButtonBits(iv.getValue());
 									if (oldtouches[id] != newtouches[id]) {
 										digital_data[0] &= ~(oldtouches[id]);
@@ -375,7 +384,20 @@ public class TouchController implements IController {
 							// above keeps every other control out while it owns it.
 							handled = true;
 							mm.getInputHandler().getTouchConsole().updateStick(iv, id, x, y);
-							if (mm.getInputHandler().getTouchConsole().handlesPointer(id)) break;
+							if (mm.getInputHandler().getTouchConsole().handlesPointer(id)) {
+								// The stick owns the pointer now: drop the d-pad
+								// bits a finger left behind when it slid off the
+								// pad onto the stick, or an arm stays lit alone.
+								boolean really = true;
+								for (int k = 0; k < MAX_FINGERS && really; k++) {
+									if (k == id) continue;
+									really = (newtouches[k] & oldtouches[id]) == 0;
+								}
+								if (really) digital_data[0] &= ~(oldtouches[id]);
+								newtouches[id] = 0;
+								oldtouches[id] = 0;
+								break;
+							}
 						}
 						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT
 							|| isSystemRectType(iv.getType())) {
@@ -395,6 +417,10 @@ public class TouchController implements IController {
 											continue;
 										}
 
+										// Console panel: a finger that slid off the d-pad onto this
+										// button must not keep carrying the pad's direction bits.
+										if (mm.getPrefsHelper().isConsolePanel())
+											newtouches[id] &= ~(UP_VALUE | DOWN_VALUE | LEFT_VALUE | RIGHT_VALUE);
 										newtouches[id] |= getButtonValue(iv.getValue(), true);
 
 										// System action routing
@@ -436,6 +462,24 @@ public class TouchController implements IController {
 						}
 					}
 				}
+			}
+		}
+
+		// Console panel: a finger still down but over no control (it slid off
+		// the pad or a button into blank space) must not keep its input
+		// latched: every move re-tests the zones, so the pad un-lights as
+		// soon as the finger is off it.
+		if (mm.getPrefsHelper().isConsolePanel()) {
+			for (int i = 0; i < MAX_FINGERS; i++) {
+				if (!touchstates[i] || ptrHit[i] || newtouches[i] == 0) continue;
+				boolean really = true;
+				for (int j = 0; j < MAX_FINGERS && really; j++) {
+					if (j == i) continue;
+					really = (newtouches[j] & newtouches[i]) == 0;
+				}
+				if (really) digital_data[0] &= ~(newtouches[i]);
+				newtouches[i] = 0;
+				oldtouches[i] = 0;
 			}
 		}
 
