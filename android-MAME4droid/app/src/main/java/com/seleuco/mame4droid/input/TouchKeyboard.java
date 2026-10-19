@@ -684,13 +684,22 @@ public class TouchKeyboard implements IController {
 
     /* ---- default layout -------------------------------------------------- */
 
+    /** The cfg's raw keys are too small to tap comfortably: grown by 200%. */
+    public static final float DEFAULT_KEY_SCALE = 2f;
+
+    private static final int NO_GAP = -1;
+
     /**
      * Appends the keyboard to the freshly parsed controller layout, using the
      * RetroArch cfg's own rects: {x, y, w, h} normalized to the main rect, in
      * cfg order, portrait table on portrait screens and landscape table
-     * otherwise. The user is free to move / resize / hide every single key in
-     * the "customize layout" screen afterwards; those edits are stored per
-     * orientation like the ones of any other panel.
+     * otherwise. Every key keeps its cfg position and is grown by
+     * {@link #DEFAULT_KEY_SCALE} around its centre, but each side stops half a
+     * neighbour gap short (the neighbour grows too) or at the screen border,
+     * so the rows end up touching without any key ever swallowing another
+     * one's hit area. The user is free to move / resize / hide every single
+     * key in the "customize layout" screen afterwards; those edits are stored
+     * per orientation like the ones of any other panel.
      */
     public void buildDefaultLayout(ArrayList<InputValue> values) {
         if (values == null) return;
@@ -708,13 +717,63 @@ public class TouchKeyboard implements IController {
 
         boolean portrait = mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT;
         float[][] table = portrait ? PORTRAIT_KEYS : LANDSCAPE_KEYS;
+        int n = Math.min(BUTTON_COUNT, table.length);
 
-        for (int i = 0; i < BUTTON_COUNT && i < table.length; i++) {
+        int[][] base = new int[n][4];
+        for (int i = 0; i < n; i++) {
             float[] k = table[i];
-            int left = Math.round(k[0] * mw);
-            int top = Math.round(k[1] * mh);
-            int w = Math.max(1, Math.round(k[2] * mw));
-            int h = Math.max(1, Math.round(k[3] * mh));
+            base[i][0] = Math.round(k[0] * mw);
+            base[i][1] = Math.round(k[1] * mh);
+            base[i][2] = Math.max(1, Math.round(k[2] * mw));
+            base[i][3] = Math.max(1, Math.round(k[3] * mh));
+        }
+
+        for (int i = 0; i < n; i++) {
+            int bx = base[i][0], by = base[i][1], bw = base[i][2], bh = base[i][3];
+            int targetW = Math.round((DEFAULT_KEY_SCALE - 1f) * bw / 2f);
+            int targetH = Math.round((DEFAULT_KEY_SCALE - 1f) * bh / 2f);
+
+            int gapL = NO_GAP, gapR = NO_GAP, gapT = NO_GAP, gapB = NO_GAP;
+            for (int j = 0; j < n; j++) {
+                if (j == i) continue;
+                int jx = base[j][0], jy = base[j][1], jw = base[j][2], jh = base[j][3];
+                // keys sharing this key's vertical band limit its sideways growth
+                if (Math.min(by + bh, jy + jh) > Math.max(by, jy)) {
+                    if (jx + jw <= bx) {
+                        int g = bx - jx - jw;
+                        if (gapL == NO_GAP || g < gapL) gapL = g;
+                    } else if (jx >= bx + bw) {
+                        int g = jx - bx - bw;
+                        if (gapR == NO_GAP || g < gapR) gapR = g;
+                    } else {
+                        gapL = 0;
+                        gapR = 0;
+                    }
+                }
+                // keys sharing its horizontal band limit its vertical growth
+                if (Math.min(bx + bw, jx + jw) > Math.max(bx, jx)) {
+                    if (jy + jh <= by) {
+                        int g = by - jy - jh;
+                        if (gapT == NO_GAP || g < gapT) gapT = g;
+                    } else if (jy >= by + bh) {
+                        int g = jy - by - bh;
+                        if (gapB == NO_GAP || g < gapB) gapB = g;
+                    } else {
+                        gapT = 0;
+                        gapB = 0;
+                    }
+                }
+            }
+
+            int growL = Math.min(targetW, Math.min(bx, gapL == NO_GAP ? targetW : gapL / 2));
+            int growR = Math.min(targetW, Math.min(mw - bx - bw, gapR == NO_GAP ? targetW : gapR / 2));
+            int growT = Math.min(targetH, Math.min(by, gapT == NO_GAP ? targetH : gapT / 2));
+            int growB = Math.min(targetH, Math.min(mh - by - bh, gapB == NO_GAP ? targetH : gapB / 2));
+
+            int left = bx - growL;
+            int top = by - growT;
+            int w = bw + growL + growR;
+            int h = bh + growT + growB;
             int[] data = { TouchController.TYPE_KEYBOARD_IMG, i, left, top, w, h };
             values.add(new InputValue(data, mm));
         }

@@ -31,7 +31,7 @@
     <string name="opt_change_controller">切换控制方式</string>
     <string name="opt_edit_layout">编辑布局</string>
     <string name="ctrl_normal">普通按键</string>
-    <string name="ctrl_keyboard">键盘</string>
+    <string name="ctrl_keyboard">PC键盘</string>
     <string name="opt_hide_touch_controls">隐藏触摸屏控制</string>
 
     <string name="dlg_save_changes">要保存更改吗？</string>
