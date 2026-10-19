@@ -144,6 +144,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_TATACON = "PREF_TATACON";
 	final static public String PREF_MAHJONG = "PREF_MAHJONG";
 	final static public String PREF_HANAFUDA = "PREF_HANAFUDA";
+	final static public String PREF_KEYBOARD_PANEL = "PREF_KEYBOARD_PANEL";
 	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
 	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
 	final static public String PREF_TATACON_SCALEX_LAND = "PREF_TATACON_SCALEX_LAND";
