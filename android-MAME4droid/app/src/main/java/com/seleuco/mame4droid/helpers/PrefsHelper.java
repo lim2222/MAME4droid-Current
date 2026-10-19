@@ -145,6 +145,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_MAHJONG = "PREF_MAHJONG";
 	final static public String PREF_HANAFUDA = "PREF_HANAFUDA";
 	final static public String PREF_KEYBOARD_PANEL = "PREF_KEYBOARD_PANEL";
+	final static public String PREF_HIDE_TOUCH_CONTROLS = "PREF_HIDE_TOUCH_CONTROLS";
 	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
 	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
 	final static public String PREF_TATACON_SCALEX_LAND = "PREF_TATACON_SCALEX_LAND";
@@ -518,12 +519,27 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	/** Hanafuda touch panel enabled: a bank of card / action buttons. */
 	public boolean isHanafuda() {
-		return getSharedPreferences().getBoolean(PREF_HANAFUDA, false) && !isMahjong() && !isKeyboardPanel();
+		return getSharedPreferences().getBoolean(PREF_HANAFUDA, false) && !isMahjong();
 	}
 
-	/** Keyboard touch panel enabled. */
+	/**
+	 * On screen PC keyboard panel enabled: a full keyboard overlay. Lowest
+	 * priority of the panels when more than one flag has been stored, so the
+	 * dedicated game panels win.
+	 */
 	public boolean isKeyboardPanel() {
-		return getSharedPreferences().getBoolean(PREF_KEYBOARD_PANEL, false) && !isMahjong() && !isHanafuda();
+		return getSharedPreferences().getBoolean(PREF_KEYBOARD_PANEL, false)
+			&& !isMahjong() && !isHanafuda() && !isTatacon();
+	}
+
+	/**
+	 * "Hide touch screen controls" quick toggle of the options menu. Deliberately
+	 * independent from the settings' touch controller visibility, which also
+	 * moves the game screen around: this one only makes the touch controls step
+	 * aside (keeping exit / option so the menu stays reachable) and nothing else.
+	 */
+	public boolean isHideTouchControls() {
+		return getSharedPreferences().getBoolean(PREF_HIDE_TOUCH_CONTROLS, false);
 	}
 
 	/**

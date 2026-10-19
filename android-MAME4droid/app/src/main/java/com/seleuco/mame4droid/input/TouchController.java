@@ -289,8 +289,9 @@ public class TouchController implements IController {
 					// AABB Collision check against UI layout rects
 					if (iv.getRect().contains(x, y) && isHandledTouchItem(iv)) {
 
-						if (iv.getType() == TYPE_MAHJONG_IMG || iv.getType() == TYPE_HANAFUDA_IMG) {
-							// Mahjong / hanafuda panel: every button is a plain keyboard key.
+						if (iv.getType() == TYPE_MAHJONG_IMG || iv.getType() == TYPE_HANAFUDA_IMG
+							|| iv.getType() == TYPE_KEYBOARD_IMG) {
+							// Mahjong / hanafuda / keyboard panel: every button is a plain key.
 							handled = true;
 							int mj = iv.getValue();
 							if (panelTouches[id] != mj) {
@@ -299,6 +300,8 @@ public class TouchController implements IController {
 								panelTouches[id] = mj;
 								if (iv.getType() == TYPE_HANAFUDA_IMG)
 									mm.getInputHandler().getTouchHanafuda().press(mj);
+								else if (iv.getType() == TYPE_KEYBOARD_IMG)
+									mm.getInputHandler().getTouchKeyboard().press(mj);
 								else
 									mm.getInputHandler().getTouchMahjong().press(mj);
 							}
@@ -466,8 +469,9 @@ public class TouchController implements IController {
 	}
 
 	public Boolean isHandledStick(){
-		// The taiko drum / mahjong / hanafuda panel replace the stick / dpad while enabled.
-		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda()) return false;
+		// The taiko drum / mahjong / hanafuda / keyboard panel replace the stick / dpad while enabled.
+		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda()
+			|| mm.getPrefsHelper().isKeyboardPanel()) return false;
 
 		// A stick hidden in the customizer takes no input either.
 		if (isControlHidden(TYPE_STICK_IMG) || isControlHidden(TYPE_ANALOG_RECT)) return false;
@@ -491,6 +495,18 @@ public class TouchController implements IController {
 		boolean handle = false;
 		boolean handleStick = isHandledStick();
 		int type = v.getType();
+
+		// "Hide touch screen controls" (options menu toggle): every touch control
+		// steps aside, except the exit / option buttons so the menu can always be
+		// opened again. The customizer is exempt so layouts stay editable while
+		// the controls are hidden.
+		if (mm.getPrefsHelper().isHideTouchControls() && !ControlCustomizer.isEnabled()) {
+			boolean isSystemButton = type == TYPE_BUTTON_RECT || type == TYPE_BUTTON_IMG
+				|| isSystemRectType(type) || isSystemImgType(type);
+			boolean keep = isSystemButton
+				&& (v.getValue() == BTN_EXIT || v.getValue() == BTN_OPTION);
+			if (!keep) return false;
+		}
 
 		// A control hidden in the customizer's HIDE mode is not drawn and does not
 		// take touches. While the customizer is open it stays visible (dimmed) so
@@ -517,17 +533,22 @@ public class TouchController implements IController {
 			// Only shown while the hanafuda panel is enabled.
 			handle = mm.getPrefsHelper().isHanafuda();
 		}
+		else if(type == TouchController.TYPE_KEYBOARD_IMG) {
+			// Only shown while the on screen keyboard panel is enabled.
+			handle = mm.getPrefsHelper().isKeyboardPanel();
+		}
 		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT
 			|| isSystemRectType(type) || isSystemImgType(type)) {
 
-			// Taiko / mahjong / hanafuda mode: the panel replaces the action
-			// buttons and the stick, and takes the system buttons over too
+			// Taiko / mahjong / hanafuda / keyboard mode: the panel replaces the
+			// action buttons and the stick, and takes the system buttons over too
 			// with its own copies. The originals step aside, so every panel
 			// owns the position - and the RESET - of its exit / option /
 			// coin / start. Outside the panels the normal layout keeps them.
 			if((mm.getPrefsHelper().isTatacon()
 				|| mm.getPrefsHelper().isMahjong()
-				|| mm.getPrefsHelper().isHanafuda())
+				|| mm.getPrefsHelper().isHanafuda()
+				|| mm.getPrefsHelper().isKeyboardPanel())
 				&& (type == TouchController.TYPE_BUTTON_IMG
 					|| type == TouchController.TYPE_BUTTON_RECT)) {
 				return false;
@@ -539,6 +560,7 @@ public class TouchController implements IController {
 				if (family == TYPE_TATACON_SYS_RECT && !mm.getPrefsHelper().isTatacon()) return false;
 				if (family == TYPE_MAHJONG_SYS_RECT && !mm.getPrefsHelper().isMahjong()) return false;
 				if (family == TYPE_HANAFUDA_SYS_RECT && !mm.getPrefsHelper().isHanafuda()) return false;
+				if (family == TYPE_KEYBOARD_SYS_RECT && !mm.getPrefsHelper().isKeyboardPanel()) return false;
 			}
 
 			if(mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && !Emulator.isPortraitFull()
@@ -595,14 +617,15 @@ public class TouchController implements IController {
 	}
 
 	/**
-	 * Releases the key held by a pointer on the mahjong / hanafuda panel (used
-	 * when a finger lifts or slides off a button). Both panels are asked to
-	 * release the index: they are mutually exclusive and each one ignores
-	 * buttons it is not holding, so the inactive panel is a no-op.
+	 * Releases the key held by a pointer on the mahjong / hanafuda / keyboard
+	 * panel (used when a finger lifts or slides off a key). All panels are asked
+	 * to release the index: they are mutually exclusive and each one ignores
+	 * buttons it is not holding, so the inactive panels are a no-op.
 	 */
 	private void releasePanelKey(int index) {
 		mm.getInputHandler().getTouchMahjong().release(index);
 		mm.getInputHandler().getTouchHanafuda().release(index);
+		mm.getInputHandler().getTouchKeyboard().release(index);
 	}
 
 	/** Drops the per-pointer panel ownership (used when inputs are reset). */
@@ -797,13 +820,17 @@ public class TouchController implements IController {
 			Log.e(TAG, "Failed to parse on-screen controller layout file", e);
 		}
 
-		// The mahjong / hanafuda panels are generated (not part of the raw layout
-		// files) so that they can adapt to whatever main rect the orientation uses.
+		// The mahjong / hanafuda / keyboard panels are generated (not part of the
+		// raw layout files) so that they can adapt to whatever main rect the
+		// orientation uses.
 		if (mm.getPrefsHelper().isMahjong()) {
 			mm.getInputHandler().getTouchMahjong().buildDefaultLayout(values);
 		}
 		if (mm.getPrefsHelper().isHanafuda()) {
 			mm.getInputHandler().getTouchHanafuda().buildDefaultLayout(values);
+		}
+		if (mm.getPrefsHelper().isKeyboardPanel()) {
+			mm.getInputHandler().getTouchKeyboard().buildDefaultLayout(values);
 		}
 		buildSystemButtonCopies(values);
 	}
@@ -823,6 +850,7 @@ public class TouchController implements IController {
 		if (mm.getPrefsHelper().isMahjong()) rectType = TYPE_MAHJONG_SYS_RECT;
 		else if (mm.getPrefsHelper().isHanafuda()) rectType = TYPE_HANAFUDA_SYS_RECT;
 		else if (mm.getPrefsHelper().isTatacon()) rectType = TYPE_TATACON_SYS_RECT;
+		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TYPE_KEYBOARD_SYS_RECT;
 		else return; // the normal layout keeps the original buttons
 
 		int imgType = rectType + 1; // the pairs are declared rect, img
