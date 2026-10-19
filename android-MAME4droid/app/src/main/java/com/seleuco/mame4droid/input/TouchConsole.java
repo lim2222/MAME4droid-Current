@@ -284,6 +284,14 @@ public class TouchConsole implements IController {
     /** Pad offset of each stick in -1..1 (visual + analog output). */
     private final float[] stickOX = { 0f, 0f };
     private final float[] stickOY = { 0f, 0f };
+    /**
+     * Axis values at the last redraw of each stick. The redraw threshold is
+     * measured against these (not against the previous touch event), so a
+     * slow drag still accumulates and the pad never freezes at a partial
+     * deflection.
+     */
+    private final float[] stickDrawX = { 0f, 0f };
+    private final float[] stickDrawY = { 0f, 0f };
 
     /** Scratch rect reused while drawing a pressed (shrunk) control. */
     private final Rect tmpRect = new Rect();
@@ -409,6 +417,7 @@ public class TouchConsole implements IController {
             if (stickOwner[i] != pid) continue;
             stickOwner[i] = -1;
             stickOX[i] = stickOY[i] = 0f;
+            stickDrawX[i] = stickDrawY[i] = 0f;
             Emulator.setAnalogData(i == STICK_LEFT
                 ? Emulator.LEFT_STICK_DATA : Emulator.RIGHT_STICK_DATA, 0, 0.0f, 0.0f);
             if (mm.getInputView() != null) mm.getInputView().invalidate(stickRects[i]);
@@ -424,6 +433,7 @@ public class TouchConsole implements IController {
             }
             stickOwner[i] = -1;
             stickOX[i] = stickOY[i] = 0f;
+            stickDrawX[i] = stickDrawY[i] = 0f;
         }
     }
 
@@ -459,13 +469,16 @@ public class TouchConsole implements IController {
         Emulator.setAnalogData(idx == STICK_LEFT
             ? Emulator.LEFT_STICK_DATA : Emulator.RIGHT_STICK_DATA, 0, ox, oy * -1.0f);
 
-        float dx = ox - stickOX[idx];
-        float dy = oy - stickOY[idx];
+        float dx = ox - stickDrawX[idx];
+        float dy = oy - stickDrawY[idx];
         stickOX[idx] = ox;
         stickOY[idx] = oy;
-        // Redraw threshold like the normal analog stick (~8% of travel).
+        // Redraw threshold like the normal analog stick (~8% of travel),
+        // measured against the last drawn position so slow drags accumulate.
         if (dx * dx + dy * dy >= 0.0064f
             && mm.getPrefsHelper().isAnimatedInput() && mm.getInputView() != null) {
+            stickDrawX[idx] = ox;
+            stickDrawY[idx] = oy;
             mm.getInputView().invalidate(stickRects[idx]);
         }
     }
