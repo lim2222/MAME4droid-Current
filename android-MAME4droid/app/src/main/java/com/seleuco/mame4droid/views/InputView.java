@@ -285,6 +285,9 @@ public class InputView extends ImageView {
 			} else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) {
 				// Same idea for the hanafuda panel buttons.
 				mm.getInputHandler().getTouchHanafuda().updateImage(v);
+			} else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) {
+				// Keyboard panel: each key draws itself.
+				mm.getInputHandler().getTouchKeyboard().updateImage(v);
 			}
 		}
 	}
@@ -388,6 +391,8 @@ public class InputView extends ImageView {
 				} else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) {
 					// Hanafuda panel: same idea.
 					mm.getInputHandler().getTouchHanafuda().draw(canvas, v.getValue());
+				} else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) {
+					mm.getInputHandler().getTouchKeyboard().draw(canvas, v.getValue());
 				}
 			}
 
@@ -420,6 +425,7 @@ public class InputView extends ImageView {
 					else if (v.getType() == TouchController.TYPE_TATACON_RECT) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) canvas.drawRect(r, p2);
+					else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) canvas.drawRect(r, p2);
 				}
 			}
 
