@@ -238,6 +238,15 @@ public class TouchConsole implements IController {
     /** Alpha used to draw a hidden control while the customizer is open. */
     public static final int HIDDEN_ALPHA = 55;
 
+    /**
+     * The thumbstick pad is drawn at 80% of the cfg's pad/background ratio.
+     * The cfg ratio leaves the pad only ~24% of the background radius of
+     * travel; the smaller artwork gives it ~40%, so the movement reads much
+     * better while the pad's edge still reaches (never crosses) the
+     * background circle's rim at full deflection.
+     */
+    private static final float PAD_SIZE_SCALE = 0.8f;
+
     /* ---- state ----------------------------------------------------------- */
 
     protected MAME4droid mm = null;
@@ -609,8 +618,8 @@ public class TouchConsole implements IController {
         bgImage.setAlpha(alpha);
         bgImage.draw(canvas);
 
-        float ratioX = stickPadRatio[value][0] > 0f ? stickPadRatio[value][0] : 0.75f;
-        float ratioY = stickPadRatio[value][1] > 0f ? stickPadRatio[value][1] : 0.75f;
+        float ratioX = (stickPadRatio[value][0] > 0f ? stickPadRatio[value][0] : 0.75f) * PAD_SIZE_SCALE;
+        float ratioY = (stickPadRatio[value][1] > 0f ? stickPadRatio[value][1] : 0.75f) * PAD_SIZE_SCALE;
         int pw = Math.max(1, Math.round(r.width() * ratioX));
         int ph = Math.max(1, Math.round(r.height() * ratioY));
         int maxDx = Math.max(0, (r.width() - pw) / 2);

@@ -500,13 +500,19 @@ public class TouchController implements IController {
 		for (int j = 0; j < values.size(); j++) {
 			InputValue iv = values.get(j);
 
-			if (iv.getType() == TYPE_STICK_IMG && pH.getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD) {
+			// With the console panel on the original stick is invisible and
+			// gets no input; it must not consume the state change here or the
+			// console d-pad branch below would never see it (no press
+			// animation / click). So both original-stick branches stand aside.
+			if (iv.getType() == TYPE_STICK_IMG && pH.getControllerType() == PrefsHelper.PREF_DIGITAL_DPAD
+				&& !pH.isConsolePanel()) {
 				if (stick_state != old_stick_state) {
 					if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
 					if (pH.isVibrate() && stick_state != STICK_NONE) wantVibrate = true;
 					old_stick_state = stick_state;
 				}
-			} else if (iv.getType() == TYPE_ANALOG_RECT && pH.getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD) {
+			} else if (iv.getType() == TYPE_ANALOG_RECT && pH.getControllerType() != PrefsHelper.PREF_DIGITAL_DPAD
+				&& !pH.isConsolePanel()) {
 				if (stick_state != old_stick_state) {
 					if (pH.isAnimatedInput() && (pH.getControllerType() == PrefsHelper.PREF_DIGITAL_STICK ||
 						(mm.getPrefsHelper().getControllerType() == PrefsHelper.PREF_ANALOG_STICK && mm.getInputHandler().getTiltSensor().isEnabled()))) {
