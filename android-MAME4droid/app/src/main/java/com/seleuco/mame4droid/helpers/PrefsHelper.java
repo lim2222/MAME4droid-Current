@@ -518,7 +518,12 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 
 	/** Hanafuda touch panel enabled: a bank of card / action buttons. */
 	public boolean isHanafuda() {
-		return getSharedPreferences().getBoolean(PREF_HANAFUDA, false) && !isMahjong();
+		return getSharedPreferences().getBoolean(PREF_HANAFUDA, false) && !isMahjong() && !isKeyboardPanel();
+	}
+
+	/** Keyboard touch panel enabled. */
+	public boolean isKeyboardPanel() {
+		return getSharedPreferences().getBoolean(PREF_KEYBOARD_PANEL, false) && !isMahjong() && !isHanafuda();
 	}
 
 	/**
