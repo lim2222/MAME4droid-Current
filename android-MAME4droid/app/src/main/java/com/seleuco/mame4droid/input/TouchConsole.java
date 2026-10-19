@@ -554,7 +554,10 @@ public class TouchConsole implements IController {
     /**
      * Draws the d-pad: the 4 arm artworks at their cfg-relative fractions of
      * the single union rect, so they follow the pad on every move / resize.
-     * An engaged direction shrinks its arm, like a pressed button.
+     * An engaged direction shrinks and dims its arm, like a pressed button.
+     * Engaged arms are drawn in a second pass on top: their frames overlap
+     * the neighbours at the diagonals, and the neighbour artwork would
+     * otherwise sit over the shrunken arm and mask (or fake) the effect.
      */
     public void drawDpad(Canvas canvas) {
         if (dpadRect.width() <= 0 || dpadRect.height() <= 0) return;
@@ -562,28 +565,34 @@ public class TouchConsole implements IController {
         int state = touchController() == null
             ? STICK_NONE : touchController().getStick_state();
 
-        for (int arm = 0; arm < 4; arm++) {
-            BitmapDrawable img = armImageFor(arm);
-            if (img == null) continue;
-            float[] rel = activeArms != null && arm < activeArms.length
-                ? activeArms[arm] : null;
-            if (rel == null) continue;
+        for (int pass = 0; pass < 2; pass++) {
+            for (int arm = 0; arm < 4; arm++) {
+                boolean pressed = armPressed(state, arm);
+                if (pressed != (pass == 1)) continue;
 
-            int l = dpadRect.left + Math.round(rel[0] * dpadRect.width());
-            int t = dpadRect.top + Math.round(rel[1] * dpadRect.height());
-            int rr = dpadRect.left + Math.round(rel[2] * dpadRect.width());
-            int b = dpadRect.top + Math.round(rel[3] * dpadRect.height());
+                BitmapDrawable img = armImageFor(arm);
+                if (img == null) continue;
+                float[] rel = activeArms != null && arm < activeArms.length
+                    ? activeArms[arm] : null;
+                if (rel == null) continue;
 
-            if (armPressed(state, arm)) {
-                tmpRect.set(l, t, rr, b);
-                tmpRect.inset((int) (tmpRect.width() * 0.08f),
-                    (int) (tmpRect.height() * 0.08f));
-                img.setBounds(tmpRect);
-            } else {
-                img.setBounds(l, t, rr, b);
+                int l = dpadRect.left + Math.round(rel[0] * dpadRect.width());
+                int t = dpadRect.top + Math.round(rel[1] * dpadRect.height());
+                int rr = dpadRect.left + Math.round(rel[2] * dpadRect.width());
+                int b = dpadRect.top + Math.round(rel[3] * dpadRect.height());
+
+                if (pressed) {
+                    tmpRect.set(l, t, rr, b);
+                    tmpRect.inset((int) (tmpRect.width() * 0.12f),
+                        (int) (tmpRect.height() * 0.12f));
+                    img.setBounds(tmpRect);
+                    img.setAlpha(dpadAlpha * 150 / 255);
+                } else {
+                    img.setBounds(l, t, rr, b);
+                    img.setAlpha(dpadAlpha);
+                }
+                img.draw(canvas);
             }
-            img.setAlpha(dpadAlpha);
-            img.draw(canvas);
         }
     }
 
