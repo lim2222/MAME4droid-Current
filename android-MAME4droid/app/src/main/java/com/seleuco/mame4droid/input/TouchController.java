@@ -100,6 +100,8 @@ public class TouchController implements IController {
 	final public static int TYPE_MAHJONG_IMG = 10;
 	// Hanafuda panel button, same idea; value = index into TouchHanafuda's table.
 	final public static int TYPE_HANAFUDA_IMG = 11;
+	// Keyboard panel button; value = index into TouchKeyboard's table.
+	final public static int TYPE_KEYBOARD_IMG = 12;
 
 	// Per panel copies of the system buttons (exit / option / coin / start).
 	// While a panel is on screen it owns these four too, so their position,
@@ -109,12 +111,14 @@ public class TouchController implements IController {
 	// the very same artwork, looked up by value in the shared button images,
 	// so no drawable is duplicated. The pairs are declared rect, img, so the
 	// image type of a family is always its rect type + 1.
-	final public static int TYPE_TATACON_SYS_RECT = 12;
-	final public static int TYPE_TATACON_SYS_IMG = 13;
-	final public static int TYPE_MAHJONG_SYS_RECT = 14;
-	final public static int TYPE_MAHJONG_SYS_IMG = 15;
-	final public static int TYPE_HANAFUDA_SYS_RECT = 16;
-	final public static int TYPE_HANAFUDA_SYS_IMG = 17;
+	final public static int TYPE_TATACON_SYS_RECT = 13;
+	final public static int TYPE_TATACON_SYS_IMG = 14;
+	final public static int TYPE_MAHJONG_SYS_RECT = 15;
+	final public static int TYPE_MAHJONG_SYS_IMG = 16;
+	final public static int TYPE_HANAFUDA_SYS_RECT = 17;
+	final public static int TYPE_HANAFUDA_SYS_IMG = 18;
+	final public static int TYPE_KEYBOARD_SYS_RECT = 19;
+	final public static int TYPE_KEYBOARD_SYS_IMG = 20;
 
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
@@ -611,14 +615,16 @@ public class TouchController implements IController {
 	public static boolean isSystemRectType(int type) {
 		return type == TYPE_TATACON_SYS_RECT
 			|| type == TYPE_MAHJONG_SYS_RECT
-			|| type == TYPE_HANAFUDA_SYS_RECT;
+			|| type == TYPE_HANAFUDA_SYS_RECT
+			|| type == TYPE_KEYBOARD_SYS_RECT;
 	}
 
 	/** True for the image piece of a panel's system button copies. */
 	public static boolean isSystemImgType(int type) {
 		return type == TYPE_TATACON_SYS_IMG
 			|| type == TYPE_MAHJONG_SYS_IMG
-			|| type == TYPE_HANAFUDA_SYS_IMG;
+			|| type == TYPE_HANAFUDA_SYS_IMG
+			|| type == TYPE_KEYBOARD_SYS_IMG;
 	}
 
 	/** Rect type of the panel family a copy belongs to, -1 when it is not one. */
@@ -626,6 +632,7 @@ public class TouchController implements IController {
 		if (type == TYPE_TATACON_SYS_RECT || type == TYPE_TATACON_SYS_IMG) return TYPE_TATACON_SYS_RECT;
 		if (type == TYPE_MAHJONG_SYS_RECT || type == TYPE_MAHJONG_SYS_IMG) return TYPE_MAHJONG_SYS_RECT;
 		if (type == TYPE_HANAFUDA_SYS_RECT || type == TYPE_HANAFUDA_SYS_IMG) return TYPE_HANAFUDA_SYS_RECT;
+		if (type == TYPE_KEYBOARD_SYS_RECT || type == TYPE_KEYBOARD_SYS_IMG) return TYPE_KEYBOARD_SYS_RECT;
 		return -1;
 	}
 
