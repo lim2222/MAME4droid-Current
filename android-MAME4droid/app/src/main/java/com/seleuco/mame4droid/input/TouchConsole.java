@@ -246,11 +246,20 @@ public class TouchConsole implements IController {
     private static final float PAD_SIZE_SCALE = 0.8f;
 
     /**
-     * How far the system-button rows of the full-screen portrait layout were
-     * raised (see controller_portrait_full.txt). The panel's own start /
-     * select follow by the same amount so the four buttons stay in step.
+     * How far above the system-button slot of the full-screen portrait layout
+     * the panel's own start / select are drawn (see PORTRAIT_SYS_ROW_TOP).
      */
-    private static final int PORTRAIT_START_SELECT_RAISE = 15;
+    private static final int PORTRAIT_START_SELECT_RAISE = 25;
+
+    /**
+     * The row of system buttons sits in the gap between the shoulder buttons
+     * of the full-screen portrait layout: L1 / R1 end at y = 360 and L2 / R2
+     * start at y = 375, a 15 unit slot exactly one button high. Drawing the
+     * row at the slot's y would let the (taller) exit / option artwork poke
+     * into both neighbours, so the whole row - the layout copies included -
+     * is drawn 10 units above the slot, clear of R1 / R2.
+     */
+    static final int PORTRAIT_SYS_ROW_TOP = 350;
 
     /* ---- state ----------------------------------------------------------- */
 

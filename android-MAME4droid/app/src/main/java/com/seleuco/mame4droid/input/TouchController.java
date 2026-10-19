@@ -1090,13 +1090,27 @@ public class TouchController implements IController {
 			}
 			if (rect != null) {
 				Rect r = rect.getOrigRect();
-				values.add(new InputValue(new int[]{ rectType, v, r.left, r.top, r.width(), r.height() }, mm));
+				int top = isPortraitSystemRow(rectType, r) ? TouchConsole.PORTRAIT_SYS_ROW_TOP : r.top;
+				values.add(new InputValue(new int[]{ rectType, v, r.left, top, r.width(), r.height() }, mm));
 			}
 			if (img != null) {
 				Rect r = img.getOrigRect();
-				values.add(new InputValue(new int[]{ imgType, v, r.left, r.top, r.width(), r.height() }, mm));
+				int top = isPortraitSystemRow(imgType, r) ? TouchConsole.PORTRAIT_SYS_ROW_TOP : r.top;
+				values.add(new InputValue(new int[]{ imgType, v, r.left, top, r.width(), r.height() }, mm));
 			}
 		}
+	}
+
+	/**
+	 * True when a system button copy belongs to the panel's portrait system
+	 * row, i.e. the one that sits between the shoulder buttons of the
+	 * full-screen portrait layout (see TouchConsole.PORTRAIT_SYS_ROW_TOP).
+	 */
+	private boolean isPortraitSystemRow(int rectType, Rect r) {
+		return rectType == TYPE_CONSOLE_SYS_RECT
+			&& mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT
+			&& Emulator.isPortraitFull()
+			&& Math.abs(r.top - TouchConsole.PORTRAIT_SYS_ROW_TOP) <= 8;
 	}
 
 	// Haptics engine : the vibrator is resolved once, the vibrate binder call runs on
