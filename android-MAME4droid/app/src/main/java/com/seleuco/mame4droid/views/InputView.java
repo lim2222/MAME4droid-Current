@@ -288,6 +288,12 @@ public class InputView extends ImageView {
 			} else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) {
 				// Keyboard panel: each key draws itself.
 				mm.getInputHandler().getTouchKeyboard().updateImage(v);
+			} else if (v.getType() == TouchController.TYPE_CONSOLE_IMG
+				|| v.getType() == TouchController.TYPE_CONSOLE_DPAD
+				|| v.getType() == TouchController.TYPE_CONSOLE_STICK) {
+				// Console panel: buttons, the single d-pad and the analog
+				// sticks all draw themselves.
+				mm.getInputHandler().getTouchConsole().updateImage(v);
 			}
 		}
 	}
@@ -393,6 +399,12 @@ public class InputView extends ImageView {
 					mm.getInputHandler().getTouchHanafuda().draw(canvas, v.getValue());
 				} else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) {
 					mm.getInputHandler().getTouchKeyboard().draw(canvas, v.getValue());
+				} else if (v.getType() == TouchController.TYPE_CONSOLE_IMG) {
+					mm.getInputHandler().getTouchConsole().drawButton(canvas, v.getValue());
+				} else if (v.getType() == TouchController.TYPE_CONSOLE_DPAD) {
+					mm.getInputHandler().getTouchConsole().drawDpad(canvas);
+				} else if (v.getType() == TouchController.TYPE_CONSOLE_STICK) {
+					mm.getInputHandler().getTouchConsole().drawStick(canvas, v.getValue());
 				}
 			}
 
@@ -426,6 +438,9 @@ public class InputView extends ImageView {
 					else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_HANAFUDA_IMG) canvas.drawRect(r, p2);
 					else if (v.getType() == TouchController.TYPE_KEYBOARD_IMG) canvas.drawRect(r, p2);
+					else if (v.getType() == TouchController.TYPE_CONSOLE_IMG
+						|| v.getType() == TouchController.TYPE_CONSOLE_DPAD
+						|| v.getType() == TouchController.TYPE_CONSOLE_STICK) canvas.drawRect(r, p2);
 				}
 			}
 

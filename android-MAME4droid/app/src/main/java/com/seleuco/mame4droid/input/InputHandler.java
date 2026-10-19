@@ -72,6 +72,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 	protected TouchMahjong touchMahjong = new TouchMahjong();
 	protected TouchHanafuda touchHanafuda = new TouchHanafuda();
 	protected TouchKeyboard touchKeyboard = new TouchKeyboard();
+	protected TouchConsole touchConsole = new TouchConsole();
 	protected GameController gameController = new GameController();
 
 	protected Mouse mouse = new Mouse();
@@ -89,6 +90,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 	public TouchMahjong getTouchMahjong() {return touchMahjong;}
 	public TouchHanafuda getTouchHanafuda() {return touchHanafuda;}
 	public TouchKeyboard getTouchKeyboard() {return touchKeyboard;}
+	public TouchConsole getTouchConsole() {return touchConsole;}
 	public Mouse getMouse() {return mouse;}
 	public Keyboard getKeyboard() {return keyboard;}
 	public GameController getGameController() {return gameController;}
@@ -113,6 +115,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 		touchMahjong.setMAME4droid(mm);
 		touchHanafuda.setMAME4droid(mm);
 		touchKeyboard.setMAME4droid(mm);
+		touchConsole.setMAME4droid(mm);
 		mouse.setMAME4droid(mm);
 		keyboard.setMAME4droid(mm);
 		gameController.setMAME4droid(mm);
@@ -157,6 +160,7 @@ public class InputHandler implements OnTouchListener, OnKeyListener {
 		touchMahjong.reset();
 		touchHanafuda.reset();
 		touchKeyboard.reset();
+		touchConsole.reset();
 	}
 
 	public void fixTiltCoin() {

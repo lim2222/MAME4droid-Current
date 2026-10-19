@@ -120,6 +120,23 @@ public class TouchController implements IController {
 	final public static int TYPE_KEYBOARD_SYS_RECT = 19;
 	final public static int TYPE_KEYBOARD_SYS_IMG = 20;
 
+	// Console controller panel (gamepad), generated from a RetroArch overlay
+	// cfg: twin analog sticks, one d-pad and the face / shoulder / start /
+	// select buttons. Like the other panels it replaces the normal stick and
+	// action buttons while enabled and owns its own exit / option copies.
+	// The d-pad is ONE single entry covering the union of the cfg's arm and
+	// diagonal zones, so its 8 directions can never be split: a move /
+	// resize / hide / opacity change always applies to the whole pad. The
+	// value of a pad button indexes TouchConsole's button table (its MAME
+	// input), the value of a stick is 0 = left, 1 = right.
+	final public static int TYPE_CONSOLE_DPAD = 21;
+	final public static int TYPE_CONSOLE_IMG = 22;
+	final public static int TYPE_CONSOLE_STICK = 23;
+	// Per panel copies of the system buttons, see above; the console panel
+	// only needs exit / option copies (it has its own start / select).
+	final public static int TYPE_CONSOLE_SYS_RECT = 24;
+	final public static int TYPE_CONSOLE_SYS_IMG = 25;
+
 	final public static int STATE_SHOWING_CONTROLLER = 1;
 	final public static int STATE_SHOWING_NONE = 3;
 
@@ -283,6 +300,15 @@ public class TouchController implements IController {
 
 				touchstates[id] = true;
 
+				// The console panel's analog stick keeps its pointer for the
+				// whole gesture: once grabbed no other control sees it (it is
+				// released in the reconcile pass below when the finger lifts).
+				if (mm.getInputHandler().getTouchConsole().handlesPointer(actionPointerId)) {
+					mm.getInputHandler().getTouchConsole().moveOwnedStick(actionPointerId, x, y);
+					handled = true;
+					continue;
+				}
+
 				for (int j = 0; j < values.size(); j++) {
 					InputValue iv = values.get(j);
 
@@ -305,6 +331,51 @@ public class TouchController implements IController {
 								else
 									mm.getInputHandler().getTouchMahjong().press(mj);
 							}
+						}
+						else if (iv.getType() == TYPE_CONSOLE_IMG) {
+							// Console panel button: a plain digital input like the
+							// normal action buttons, its bit table lives in
+							// TouchConsole. Break afterwards: one touch point
+							// belongs to one button (the cfg's rects are tangent
+							// squares, their corners slightly overlap).
+							handled = true;
+							switch (actionMasked) {
+								case MotionEvent.ACTION_DOWN:
+								case MotionEvent.ACTION_POINTER_DOWN:
+								case MotionEvent.ACTION_MOVE:
+									newtouches[id] |= mm.getInputHandler().getTouchConsole().getButtonBits(iv.getValue());
+									if (oldtouches[id] != newtouches[id]) {
+										digital_data[0] &= ~(oldtouches[id]);
+									}
+
+									digital_data[0] |= newtouches[id];
+							}
+							break;
+						}
+						else if (iv.getType() == TYPE_CONSOLE_DPAD) {
+							// The d-pad is ONE control: the position inside its
+							// rect picks the direction (way restriction of the
+							// settings applies, like on the normal stick).
+							handled = true;
+							switch (actionMasked) {
+								case MotionEvent.ACTION_DOWN:
+								case MotionEvent.ACTION_POINTER_DOWN:
+								case MotionEvent.ACTION_MOVE:
+									newtouches[id] = mm.getInputHandler().getTouchConsole().getDpadBits(x, y, iv.getRect());
+									if (oldtouches[id] != newtouches[id]) {
+										digital_data[0] &= ~(oldtouches[id]);
+									}
+
+									digital_data[0] |= newtouches[id];
+							}
+							break;
+						}
+						else if (iv.getType() == TYPE_CONSOLE_STICK) {
+							// The analog stick grabs the whole pointer; the yield
+							// above keeps every other control out while it owns it.
+							handled = true;
+							mm.getInputHandler().getTouchConsole().updateStick(iv, id, x, y);
+							if (mm.getInputHandler().getTouchConsole().handlesPointer(id)) break;
 						}
 						else if (iv.getType() == TYPE_BUTTON_RECT || iv.getType() == TYPE_STICK_RECT
 							|| isSystemRectType(iv.getType())) {
@@ -375,6 +446,9 @@ public class TouchController implements IController {
 				releasePanelKey(panelTouches[i]);
 				panelTouches[i] = -1;
 			}
+
+			// ... and the console panel's analog stick it was dragging.
+			if (!touchstates[i]) mm.getInputHandler().getTouchConsole().releasePointer(i);
 
 			if (!touchstates[i] && newtouches[i] != 0) {
 				boolean really = true;
@@ -462,6 +536,30 @@ public class TouchController implements IController {
 					if (pH.isVibrate() && btnStates[i] == BTN_PRESS_STATE) wantVibrate = true;
 					old_btnStates[iv.getValue()] = btnStates[iv.getValue()];
 				}
+			} else if (iv.getType() == TYPE_CONSOLE_DPAD) {
+				// The console panel's d-pad animates (and clicks) whenever its
+				// direction changes, regardless of the stick type setting.
+				if (stick_state != old_stick_state) {
+					if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
+					if (pH.isVibrate() && stick_state != STICK_NONE) wantVibrate = true;
+					old_stick_state = stick_state;
+				}
+			} else if (iv.getType() == TYPE_CONSOLE_IMG && !onlyStick) {
+				// Console panel buttons read their pressed state from the
+				// shared digital bits, like the normal action buttons. L3 / R3
+				// share L1 / R1's bit, so they light up together - they send
+				// the same input.
+				int i = iv.getValue();
+				if (i >= 0 && i < NUM_BUTTONS) {
+					btnStates[i] = (digital_data[0] & mm.getInputHandler().getTouchConsole().getButtonBits(i)) != 0
+						? BTN_PRESS_STATE : BTN_NO_PRESS_STATE;
+
+					if (btnStates[i] != old_btnStates[i]) {
+						if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
+						if (pH.isVibrate() && btnStates[i] == BTN_PRESS_STATE) wantVibrate = true;
+						old_btnStates[i] = btnStates[i];
+					}
+				}
 			}
 		}
 
@@ -469,9 +567,9 @@ public class TouchController implements IController {
 	}
 
 	public Boolean isHandledStick(){
-		// The taiko drum / mahjong / hanafuda / keyboard panel replace the stick / dpad while enabled.
+		// The taiko drum / mahjong / hanafuda / keyboard / console panel replace the stick / dpad while enabled.
 		if (mm.getPrefsHelper().isTatacon() || mm.getPrefsHelper().isMahjong() || mm.getPrefsHelper().isHanafuda()
-			|| mm.getPrefsHelper().isKeyboardPanel()) return false;
+			|| mm.getPrefsHelper().isKeyboardPanel() || mm.getPrefsHelper().isConsolePanel()) return false;
 
 		// A stick hidden in the customizer takes no input either.
 		if (isControlHidden(TYPE_STICK_IMG) || isControlHidden(TYPE_ANALOG_RECT)) return false;
@@ -537,10 +635,16 @@ public class TouchController implements IController {
 			// Only shown while the on screen keyboard panel is enabled.
 			handle = mm.getPrefsHelper().isKeyboardPanel();
 		}
+		else if(type == TouchController.TYPE_CONSOLE_DPAD
+			|| type == TouchController.TYPE_CONSOLE_IMG
+			|| type == TouchController.TYPE_CONSOLE_STICK) {
+			// Only shown while the console controller panel is enabled.
+			handle = mm.getPrefsHelper().isConsolePanel();
+		}
 		else if(type == TouchController.TYPE_BUTTON_IMG || type  == TouchController.TYPE_BUTTON_RECT
 			|| isSystemRectType(type) || isSystemImgType(type)) {
 
-			// Taiko / mahjong / hanafuda / keyboard mode: the panel replaces the
+			// Taiko / mahjong / hanafuda / keyboard / console mode: the panel replaces the
 			// action buttons and the stick, and takes the system buttons over too
 			// with its own copies. The originals step aside, so every panel
 			// owns the position - and the RESET - of its exit / option /
@@ -548,7 +652,8 @@ public class TouchController implements IController {
 			if((mm.getPrefsHelper().isTatacon()
 				|| mm.getPrefsHelper().isMahjong()
 				|| mm.getPrefsHelper().isHanafuda()
-				|| mm.getPrefsHelper().isKeyboardPanel())
+				|| mm.getPrefsHelper().isKeyboardPanel()
+				|| mm.getPrefsHelper().isConsolePanel())
 				&& (type == TouchController.TYPE_BUTTON_IMG
 					|| type == TouchController.TYPE_BUTTON_RECT)) {
 				return false;
@@ -561,6 +666,7 @@ public class TouchController implements IController {
 				if (family == TYPE_MAHJONG_SYS_RECT && !mm.getPrefsHelper().isMahjong()) return false;
 				if (family == TYPE_HANAFUDA_SYS_RECT && !mm.getPrefsHelper().isHanafuda()) return false;
 				if (family == TYPE_KEYBOARD_SYS_RECT && !mm.getPrefsHelper().isKeyboardPanel()) return false;
+				if (family == TYPE_CONSOLE_SYS_RECT && !mm.getPrefsHelper().isConsolePanel()) return false;
 			}
 
 			if(mm.getMainHelper().getscrOrientation() == Configuration.ORIENTATION_PORTRAIT && !Emulator.isPortraitFull()
@@ -639,7 +745,8 @@ public class TouchController implements IController {
 		return type == TYPE_TATACON_SYS_RECT
 			|| type == TYPE_MAHJONG_SYS_RECT
 			|| type == TYPE_HANAFUDA_SYS_RECT
-			|| type == TYPE_KEYBOARD_SYS_RECT;
+			|| type == TYPE_KEYBOARD_SYS_RECT
+			|| type == TYPE_CONSOLE_SYS_RECT;
 	}
 
 	/** True for the image piece of a panel's system button copies. */
@@ -647,7 +754,8 @@ public class TouchController implements IController {
 		return type == TYPE_TATACON_SYS_IMG
 			|| type == TYPE_MAHJONG_SYS_IMG
 			|| type == TYPE_HANAFUDA_SYS_IMG
-			|| type == TYPE_KEYBOARD_SYS_IMG;
+			|| type == TYPE_KEYBOARD_SYS_IMG
+			|| type == TYPE_CONSOLE_SYS_IMG;
 	}
 
 	/** Rect type of the panel family a copy belongs to, -1 when it is not one. */
@@ -656,6 +764,7 @@ public class TouchController implements IController {
 		if (type == TYPE_MAHJONG_SYS_RECT || type == TYPE_MAHJONG_SYS_IMG) return TYPE_MAHJONG_SYS_RECT;
 		if (type == TYPE_HANAFUDA_SYS_RECT || type == TYPE_HANAFUDA_SYS_IMG) return TYPE_HANAFUDA_SYS_RECT;
 		if (type == TYPE_KEYBOARD_SYS_RECT || type == TYPE_KEYBOARD_SYS_IMG) return TYPE_KEYBOARD_SYS_RECT;
+		if (type == TYPE_CONSOLE_SYS_RECT || type == TYPE_CONSOLE_SYS_IMG) return TYPE_CONSOLE_SYS_RECT;
 		return -1;
 	}
 
@@ -832,6 +941,9 @@ public class TouchController implements IController {
 		if (mm.getPrefsHelper().isKeyboardPanel()) {
 			mm.getInputHandler().getTouchKeyboard().buildDefaultLayout(values);
 		}
+		if (mm.getPrefsHelper().isConsolePanel()) {
+			mm.getInputHandler().getTouchConsole().buildDefaultLayout(values);
+		}
 		buildSystemButtonCopies(values);
 	}
 
@@ -851,11 +963,16 @@ public class TouchController implements IController {
 		else if (mm.getPrefsHelper().isHanafuda()) rectType = TYPE_HANAFUDA_SYS_RECT;
 		else if (mm.getPrefsHelper().isTatacon()) rectType = TYPE_TATACON_SYS_RECT;
 		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TYPE_KEYBOARD_SYS_RECT;
+		else if (mm.getPrefsHelper().isConsolePanel()) rectType = TYPE_CONSOLE_SYS_RECT;
 		else return; // the normal layout keeps the original buttons
 
 		int imgType = rectType + 1; // the pairs are declared rect, img
 
-		for (int v = BTN_EXIT; v <= BTN_START; v++) {
+		// The console panel has its own start / select artwork and inputs, so
+		// it only needs copies of exit and option.
+		int lastValue = rectType == TYPE_CONSOLE_SYS_RECT ? BTN_OPTION : BTN_START;
+
+		for (int v = BTN_EXIT; v <= lastValue; v++) {
 			InputValue rect = null;
 			InputValue img = null;
 			for (InputValue iv : values) {

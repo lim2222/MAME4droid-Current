@@ -310,7 +310,10 @@ public class ControlCustomizer {
 				iv.getType() == TouchController.TYPE_ANALOG_RECT ||
 				iv.getType() == TouchController.TYPE_MAHJONG_IMG ||
 				iv.getType() == TouchController.TYPE_HANAFUDA_IMG ||
-				iv.getType() == TouchController.TYPE_KEYBOARD_IMG)
+				iv.getType() == TouchController.TYPE_KEYBOARD_IMG ||
+				iv.getType() == TouchController.TYPE_CONSOLE_IMG ||
+				iv.getType() == TouchController.TYPE_CONSOLE_DPAD ||
+				iv.getType() == TouchController.TYPE_CONSOLE_STICK)
 				&& iv.getRect().contains(x, y)) {
 
 				valueMoved = iv;
@@ -493,6 +496,7 @@ public class ControlCustomizer {
 		else if (mm.getPrefsHelper().isHanafuda()) rectType = TouchController.TYPE_HANAFUDA_SYS_RECT;
 		else if (mm.getPrefsHelper().isTatacon()) rectType = TouchController.TYPE_TATACON_SYS_RECT;
 		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TouchController.TYPE_KEYBOARD_SYS_RECT;
+		else if (mm.getPrefsHelper().isConsolePanel()) rectType = TouchController.TYPE_CONSOLE_SYS_RECT;
 		else return; // the normal layout has no copies
 		int imgType = rectType + 1; // the pairs are declared rect, img
 
@@ -1082,6 +1086,10 @@ public class ControlCustomizer {
 				} else if (type == TouchController.TYPE_HANAFUDA_IMG) {
 					draw = true;
 				} else if (type == TouchController.TYPE_KEYBOARD_IMG) {
+					draw = true;
+				} else if (type == TouchController.TYPE_CONSOLE_IMG
+					|| type == TouchController.TYPE_CONSOLE_DPAD
+					|| type == TouchController.TYPE_CONSOLE_STICK) {
 					draw = true;
 				}
 

@@ -145,6 +145,7 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_MAHJONG = "PREF_MAHJONG";
 	final static public String PREF_HANAFUDA = "PREF_HANAFUDA";
 	final static public String PREF_KEYBOARD_PANEL = "PREF_KEYBOARD_PANEL";
+	final static public String PREF_CONSOLE_PANEL = "PREF_CONSOLE_PANEL";
 	final static public String PREF_HIDE_TOUCH_CONTROLS = "PREF_HIDE_TOUCH_CONTROLS";
 	final static public String PREF_TATACON_SCALE_LAND = "PREF_TATACON_SCALE_LAND";
 	final static public String PREF_TATACON_SCALE_PORTRAIT = "PREF_TATACON_SCALE_PORTRAIT";
@@ -530,6 +531,17 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	public boolean isKeyboardPanel() {
 		return getSharedPreferences().getBoolean(PREF_KEYBOARD_PANEL, false)
 			&& !isMahjong() && !isHanafuda() && !isTatacon();
+	}
+
+	/**
+	 * Console controller panel enabled: twin analog sticks, one d-pad and the
+	 * face / shoulder / start / select buttons. Lowest priority of the panels
+	 * when more than one flag has been stored, so every dedicated game panel
+	 * wins.
+	 */
+	public boolean isConsolePanel() {
+		return getSharedPreferences().getBoolean(PREF_CONSOLE_PANEL, false)
+			&& !isMahjong() && !isHanafuda() && !isTatacon() && !isKeyboardPanel();
 	}
 
 	/**

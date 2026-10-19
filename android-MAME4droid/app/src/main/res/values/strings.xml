@@ -37,6 +37,7 @@
     <string name="opt_edit_layout">Edit layout</string>
     <string name="ctrl_normal">Normal buttons</string>
     <string name="ctrl_keyboard">PC Keyboard</string>
+    <string name="ctrl_console">Console Controller</string>
     <string name="opt_hide_touch_controls">Hide touch screen controls</string>
 
     <!-- DialogHelper -->
