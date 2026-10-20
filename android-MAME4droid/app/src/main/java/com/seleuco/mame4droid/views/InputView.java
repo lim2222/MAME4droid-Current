@@ -385,11 +385,16 @@ public class InputView extends ImageView {
 					// Taiko drum: delegate drawing to its own class.
 					mm.getInputHandler().getTouchTaiko().draw(canvas);
 				} else if (v.getType() == TouchController.TYPE_BUTTON_IMG
-					|| TouchController.isSystemImgType(v.getType())) {
+					|| (TouchController.isSystemImgType(v.getType())
+						&& v.getType() != TouchController.TYPE_CONSOLE_SYS_IMG)) {
 					// Select the correct button image (pressed or unpressed).
 					// The panel's system button copies draw the shared artwork
 					// of the normal buttons, looked up by value.
 					d = btns_images[v.getValue()][mm.getInputHandler().getTouchController().getBtnStates()[v.getValue()]];
+				} else if (v.getType() == TouchController.TYPE_CONSOLE_SYS_IMG) {
+					// Console panel system copies: shared artwork, but an independent press
+					// state so they don't light up together with the panel's own L2 / R2.
+					d = btns_images[v.getValue()][mm.getInputHandler().getTouchController().getConsoleSysBtnState(v.getValue())];
 				} else if (v.getType() == TouchController.TYPE_MAHJONG_IMG) {
 					// Mahjong panel: each button draws itself so a press can
 					// shrink it slightly.

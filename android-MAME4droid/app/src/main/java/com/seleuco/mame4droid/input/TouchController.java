@@ -156,6 +156,21 @@ public class TouchController implements IController {
 	public int[] getBtnStates() { return btnStates; }
 	protected int[] old_btnStates = new int[NUM_BUTTONS];
 
+	/** Press state of a console panel system copy: index 0 = exit, 1 = option.
+	 * Independent of the panel's own L2 / R2 buttons (btnStates[6] / [7]). */
+	public int getConsoleSysBtnState(int value) {
+		int i = value - BTN_EXIT; // BTN_EXIT=6 -> 0, BTN_OPTION=7 -> 1
+		if (i < 0 || i >= 2) return BTN_NO_PRESS_STATE;
+		return consoleSysBtnStates[i];
+	}
+
+	/** Independent press state for the console panel's exit / option system
+	 * copies (index 0 = exit, 1 = option). They must not share btnStates[6] /
+	 * btnStates[7] with the panel's own L2 / R2 buttons, otherwise pressing L2
+	 * would light exit and pressing R2 would light option. */
+	protected int[] consoleSysBtnStates = new int[2];
+	protected int[] oldConsoleSysBtnStates = new int[2];
+
 	protected int ax = 0;
 	protected int ay = 0;
 	protected float dx = 1;
@@ -168,6 +183,8 @@ public class TouchController implements IController {
 		stick_state = old_stick_state = STICK_NONE;
 		for (int i = 0; i < NUM_BUTTONS; i++)
 			btnStates[i] = old_btnStates[i] = BTN_NO_PRESS_STATE;
+		for (int i = 0; i < 2; i++)
+			consoleSysBtnStates[i] = oldConsoleSysBtnStates[i] = BTN_NO_PRESS_STATE;
 		for (int i = 0; i < MAX_FINGERS; i++)
 			panelTouches[i] = -1;
 	}
@@ -666,6 +683,20 @@ public class TouchController implements IController {
 						if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
 						if (pH.isVibrate() && btnStates[i] == BTN_PRESS_STATE) wantVibrate = true;
 						old_btnStates[i] = btnStates[i];
+					}
+				}
+			} else if (iv.getType() == TYPE_CONSOLE_SYS_IMG && mm.getPrefsHelper().isConsolePanel()) {
+				// Console panel system copies (exit / option) keep an
+				// independent press state so they don't share btnStates[6] /
+				// btnStates[7] with the panel's own L2 / R2 buttons.
+				int i = iv.getValue() - BTN_EXIT; // 0 = exit, 1 = option
+				if (i >= 0 && i < 2) {
+					int state = (digital_data[0] & getButtonValue(iv.getValue(), false)) != 0
+						? BTN_PRESS_STATE : BTN_NO_PRESS_STATE;
+					if (consoleSysBtnStates[i] != oldConsoleSysBtnStates[i]) {
+						if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
+						if (pH.isVibrate() && state == BTN_PRESS_STATE) wantVibrate = true;
+						oldConsoleSysBtnStates[i] = consoleSysBtnStates[i] = state;
 					}
 				}
 			}
