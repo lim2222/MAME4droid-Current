@@ -148,7 +148,7 @@ public class TouchKeyboard implements IController {
         {0.527778f, 0.865417f, 0.020833f, 0.015625f}, // retrok_leftbracket
         {0.571759f, 0.865417f, 0.020833f, 0.015625f}, // retrok_rightbracket
         {0.627315f, 0.865417f, 0.032407f, 0.015625f}, // retrok_backslash
-        {0.038194f, 0.898403f, 0.038194f, 0.015625f}, // overlay_next
+        {0.020833f, 0.898403f, 0.038194f, 0.015625f}, // overlay_next
         {0.099537f, 0.898403f, 0.020833f, 0.015625f}, // retrok_a
         {0.143519f, 0.898403f, 0.020833f, 0.015625f}, // retrok_s
         {0.187500f, 0.898403f, 0.020833f, 0.015625f}, // retrok_d
@@ -161,7 +161,7 @@ public class TouchKeyboard implements IController {
         {0.495370f, 0.898403f, 0.020833f, 0.015625f}, // retrok_semicolon
         {0.539352f, 0.898403f, 0.020833f, 0.015625f}, // retrok_quote
         {0.611111f, 0.898403f, 0.048611f, 0.015625f}, // retrok_enter
-        {0.048611f, 0.931389f, 0.048611f, 0.015625f}, // retrok_shift
+        {0.020833f, 0.931389f, 0.048611f, 0.015625f}, // retrok_shift
         {0.120370f, 0.931389f, 0.020833f, 0.015625f}, // retrok_z
         {0.164352f, 0.931389f, 0.020833f, 0.015625f}, // retrok_x
         {0.208333f, 0.931389f, 0.020833f, 0.015625f}, // retrok_c
@@ -173,10 +173,10 @@ public class TouchKeyboard implements IController {
         {0.472222f, 0.931389f, 0.020833f, 0.015625f}, // retrok_period
         {0.516204f, 0.931389f, 0.020833f, 0.015625f}, // retrok_slash
         {0.599537f, 0.931389f, 0.060185f, 0.015625f}, // retrok_rshift
-        {0.031250f, 0.964375f, 0.031250f, 0.015625f}, // retrok_ctrl
-        {0.142361f, 0.964375f, 0.031250f, 0.015625f}, // retrok_alt
+        {0.020833f, 0.964375f, 0.031250f, 0.015625f}, // retrok_ctrl
+        {0.277778f, 0.964375f, 0.031250f, 0.015625f}, // retrok_alt
         {0.329861f, 0.964375f, 0.153935f, 0.015625f}, // retrok_space
-        {0.517361f, 0.964375f, 0.031250f, 0.015625f}, // retrok_ralt
+        {0.504629f, 0.964375f, 0.031250f, 0.015625f}, // retrok_ralt
         {0.628472f, 0.964375f, 0.031250f, 0.015625f}, // retrok_rctrl
         {0.699074f, 0.832431f, 0.020833f, 0.015625f}, // retrok_insert
         {0.743056f, 0.832431f, 0.020833f, 0.015625f}, // retrok_home
@@ -253,7 +253,7 @@ public class TouchKeyboard implements IController {
         {0.527778f, 0.753417f, 0.020833f, 0.030883f}, // retrok_leftbracket
         {0.571759f, 0.753417f, 0.020833f, 0.030883f}, // retrok_rightbracket
         {0.627315f, 0.753417f, 0.032407f, 0.030883f}, // retrok_backslash
-        {0.038194f, 0.819403f, 0.038194f, 0.030883f}, // overlay_next
+        {0.020833f, 0.819403f, 0.038194f, 0.030883f}, // overlay_next
         {0.099537f, 0.819403f, 0.020833f, 0.030883f}, // retrok_a
         {0.143519f, 0.819403f, 0.020833f, 0.030883f}, // retrok_s
         {0.187500f, 0.819403f, 0.020833f, 0.030883f}, // retrok_d
@@ -266,7 +266,7 @@ public class TouchKeyboard implements IController {
         {0.495370f, 0.819403f, 0.020833f, 0.030883f}, // retrok_semicolon
         {0.539352f, 0.819403f, 0.020833f, 0.030883f}, // retrok_quote
         {0.611111f, 0.819403f, 0.048611f, 0.030883f}, // retrok_enter
-        {0.048611f, 0.885389f, 0.048611f, 0.030883f}, // retrok_shift
+        {0.020833f, 0.885389f, 0.048611f, 0.030883f}, // retrok_shift
         {0.120370f, 0.885389f, 0.020833f, 0.030883f}, // retrok_z
         {0.164352f, 0.885389f, 0.020833f, 0.030883f}, // retrok_x
         {0.208333f, 0.885389f, 0.020833f, 0.030883f}, // retrok_c
@@ -278,10 +278,10 @@ public class TouchKeyboard implements IController {
         {0.472222f, 0.885389f, 0.020833f, 0.030883f}, // retrok_period
         {0.516204f, 0.885389f, 0.020833f, 0.030883f}, // retrok_slash
         {0.599537f, 0.885389f, 0.060185f, 0.030883f}, // retrok_rshift
-        {0.031250f, 0.951375f, 0.031250f, 0.030883f}, // retrok_ctrl
-        {0.142361f, 0.951375f, 0.031250f, 0.030883f}, // retrok_alt
+        {0.020833f, 0.951375f, 0.031250f, 0.030883f}, // retrok_ctrl
+        {0.277778f, 0.951375f, 0.031250f, 0.030883f}, // retrok_alt
         {0.329861f, 0.951375f, 0.153935f, 0.030883f}, // retrok_space
-        {0.517361f, 0.951375f, 0.031250f, 0.030883f}, // retrok_ralt
+        {0.504629f, 0.951375f, 0.031250f, 0.030883f}, // retrok_ralt
         {0.628472f, 0.951375f, 0.031250f, 0.030883f}, // retrok_rctrl
         {0.699074f, 0.687431f, 0.020833f, 0.030883f}, // retrok_insert
         {0.743056f, 0.687431f, 0.020833f, 0.030883f}, // retrok_home
