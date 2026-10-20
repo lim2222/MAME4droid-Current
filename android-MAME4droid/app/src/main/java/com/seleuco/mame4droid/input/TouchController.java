@@ -693,7 +693,7 @@ public class TouchController implements IController {
 				if (i >= 0 && i < 2) {
 					int state = (digital_data[0] & getButtonValue(iv.getValue(), false)) != 0
 						? BTN_PRESS_STATE : BTN_NO_PRESS_STATE;
-					if (consoleSysBtnStates[i] != oldConsoleSysBtnStates[i]) {
+					if (state != oldConsoleSysBtnStates[i]) {
 						if (pH.isAnimatedInput()) mm.getInputView().invalidate(iv.getRect());
 						if (pH.isVibrate() && state == BTN_PRESS_STATE) wantVibrate = true;
 						oldConsoleSysBtnStates[i] = consoleSysBtnStates[i] = state;
