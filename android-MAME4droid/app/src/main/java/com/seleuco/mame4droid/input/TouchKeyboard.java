@@ -202,8 +202,8 @@ public class TouchKeyboard implements IController {
         {0.847222f, 0.931389f, 0.020833f, 0.015625f}, // retrok_keypad1
         {0.891204f, 0.931389f, 0.020833f, 0.015625f}, // retrok_keypad2
         {0.935185f, 0.931389f, 0.020833f, 0.015625f}, // retrok_keypad3
-        {0.979167f, 0.931389f, 0.020833f, 0.046875f}, // retrok_kp_enter
-        {0.848611f, 0.964375f, 0.064815f, 0.015625f}, // retrok_keypad0
+        {0.979167f, 0.931389f, 0.020833f, 0.038875f}, // retrok_kp_enter
+        {0.862611f, 0.964375f, 0.050815f, 0.015625f}, // retrok_keypad0
         {0.935185f, 0.964375f, 0.020833f, 0.015625f}, // retrok_kp_equals
     };
 
@@ -308,7 +308,7 @@ public class TouchKeyboard implements IController {
         {0.891204f, 0.885389f, 0.020833f, 0.030883f}, // retrok_keypad2
         {0.935185f, 0.885389f, 0.020833f, 0.030883f}, // retrok_keypad3
         {0.979167f, 0.885389f, 0.020833f, 0.096869f}, // retrok_kp_enter
-        {0.848611f, 0.951375f, 0.064815f, 0.030883f}, // retrok_keypad0
+        {0.862611f, 0.951375f, 0.050815f, 0.030883f}, // retrok_keypad0
         {0.935185f, 0.951375f, 0.020833f, 0.030883f}, // retrok_kp_equals
     };
 
