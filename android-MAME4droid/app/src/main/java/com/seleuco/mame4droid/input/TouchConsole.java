@@ -252,14 +252,12 @@ public class TouchConsole implements IController {
     private static final int PORTRAIT_START_SELECT_RAISE = 25;
 
     /**
-     * The row of system buttons sits in the gap between the shoulder buttons
-     * of the full-screen portrait layout: L1 / R1 end at y = 360 and L2 / R2
-     * start at y = 375, a 15 unit slot exactly one button high. Drawing the
-     * row at the slot's y would let the (taller) exit / option artwork poke
-     * into both neighbours, so the whole row - the layout copies included -
-     * is drawn 10 units above the slot, clear of R1 / R2.
+     * The row of system buttons of the full-screen portrait console layout:
+     * exit / option / coin / start are all drawn at y = 210, well above the
+     * L1 / R1 shoulder keys (which start around y = 245), so the taller exit
+     * / option artwork never touches the shoulder keys.
      */
-    static final int PORTRAIT_SYS_ROW_TOP = 350;
+    static final int PORTRAIT_SYS_ROW_TOP = 210;
 
     /* ---- state ----------------------------------------------------------- */
 
