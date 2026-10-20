@@ -134,7 +134,7 @@ public class TouchKeyboard implements IController {
         {0.504630f, 0.832431f, 0.020833f, 0.015625f}, // retrok_minus
         {0.548611f, 0.832431f, 0.020833f, 0.015625f}, // retrok_equals
         {0.615741f, 0.832431f, 0.043981f, 0.015625f}, // retrok_backspace
-        {0.032407f, 0.865417f, 0.032407f, 0.015625f}, // retrok_tab
+        {0.020833f, 0.865417f, 0.032407f, 0.015625f}, // retrok_tab
         {0.087963f, 0.865417f, 0.020833f, 0.015625f}, // retrok_q
         {0.131944f, 0.865417f, 0.020833f, 0.015625f}, // retrok_w
         {0.175926f, 0.865417f, 0.020833f, 0.015625f}, // retrok_e
@@ -195,7 +195,7 @@ public class TouchKeyboard implements IController {
         {0.847222f, 0.865417f, 0.020833f, 0.015625f}, // retrok_keypad7
         {0.891204f, 0.865417f, 0.020833f, 0.015625f}, // retrok_keypad8
         {0.935185f, 0.865417f, 0.020833f, 0.015625f}, // retrok_keypad9
-        {0.979167f, 0.881910f, 0.020833f, 0.032118f}, // retrok_kp_plus
+        {0.979167f, 0.865417f, 0.020833f, 0.032118f}, // retrok_kp_plus
         {0.847222f, 0.898403f, 0.020833f, 0.015625f}, // retrok_keypad4
         {0.891204f, 0.898403f, 0.020833f, 0.015625f}, // retrok_keypad5
         {0.935185f, 0.898403f, 0.020833f, 0.015625f}, // retrok_keypad6
@@ -239,7 +239,7 @@ public class TouchKeyboard implements IController {
         {0.504630f, 0.687431f, 0.020833f, 0.030883f}, // retrok_minus
         {0.548611f, 0.687431f, 0.020833f, 0.030883f}, // retrok_equals
         {0.615741f, 0.687431f, 0.043981f, 0.030883f}, // retrok_backspace
-        {0.032407f, 0.753417f, 0.032407f, 0.030883f}, // retrok_tab
+        {0.020833f, 0.753417f, 0.032407f, 0.030883f}, // retrok_tab
         {0.087963f, 0.753417f, 0.020833f, 0.030883f}, // retrok_q
         {0.131944f, 0.753417f, 0.020833f, 0.030883f}, // retrok_w
         {0.175926f, 0.753417f, 0.020833f, 0.030883f}, // retrok_e
@@ -300,7 +300,7 @@ public class TouchKeyboard implements IController {
         {0.847222f, 0.753417f, 0.020833f, 0.030883f}, // retrok_keypad7
         {0.891204f, 0.753417f, 0.020833f, 0.030883f}, // retrok_keypad8
         {0.935185f, 0.753417f, 0.020833f, 0.030883f}, // retrok_keypad9
-        {0.979167f, 0.786417f, 0.020833f, 0.064236f}, // retrok_kp_plus
+        {0.979167f, 0.753417f, 0.020833f, 0.064236f}, // retrok_kp_plus
         {0.847222f, 0.819403f, 0.020833f, 0.030883f}, // retrok_keypad4
         {0.891204f, 0.819403f, 0.020833f, 0.030883f}, // retrok_keypad5
         {0.935185f, 0.819403f, 0.020833f, 0.030883f}, // retrok_keypad6
