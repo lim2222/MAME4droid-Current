@@ -1026,15 +1026,17 @@ public class TouchController implements IController {
 	}
 
 	/**
-	 * In full screen portrait the exit / option / coin / start buttons always
-	 * follow the layout defaults (see TouchConsole.PORTRAIT_SYS_ROW_TOP), both
-	 * the normal layout's buttons and the active panel's copies: a per game
-	 * layout saved by another game - or by an older build - must never drag
-	 * them around when a new game is started.
+	 * Full screen portrait: a game played for the first time must show its
+	 * system buttons in the layout defaults (see
+	 * TouchConsole.PORTRAIT_SYS_ROW_TOP) instead of inheriting the shared
+	 * layout saved by another game. Once the game has a layout of its own the
+	 * stored offsets are honoured, so the buttons stay freely draggable and
+	 * their saved position is restored on every following launch.
 	 */
 	private void enforcePortraitFullscreenSystemRow() {
 		if (mm.getMainHelper().getscrOrientation() != Configuration.ORIENTATION_PORTRAIT) return;
 		if (!Emulator.isPortraitFull()) return;
+		if (mm.getPrefsHelper().hasScopedControlLayout(true)) return;
 
 		int rectType;
 		if (mm.getPrefsHelper().isMahjong()) rectType = TYPE_MAHJONG_SYS_RECT;

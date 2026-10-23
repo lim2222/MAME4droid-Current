@@ -842,6 +842,19 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	}
 
 	/**
+	 * True when the game being played has a layout of its own, i.e. it was
+	 * customized and saved. False means the shared layout would be used as a
+	 * fallback, which is the case of a game played for the first time.
+	 */
+	public boolean hasScopedControlLayout(boolean portrait) {
+		String game = getLayoutGame();
+		if (game.isEmpty())
+			return false;
+		return getSharedPreferences().contains(
+			(portrait ? PREF_DEFINED_CONTROL_LAYOUT_P : PREF_DEFINED_CONTROL_LAYOUT) + "__" + game);
+	}
+
+	/**
 	 * Writes a layout entry to the game specific copy and to the shared copy
 	 * at once, so games without a layout of their own keep following the last
 	 * saved one.
