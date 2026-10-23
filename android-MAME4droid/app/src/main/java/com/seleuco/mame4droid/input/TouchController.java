@@ -1036,15 +1036,13 @@ public class TouchController implements IController {
 		else return;
 
 		int imgType = rectType + 1;
-		int top = TouchConsole.PORTRAIT_SYS_ROW_TOP;
 
 		for (InputValue iv : values) {
 			if (iv.getType() != rectType && iv.getType() != imgType) continue;
-			Rect r = iv.getOrigRect();
-			if (r == null) continue;
-			iv.setRect(r.left, top, r.width(), r.height());
-			iv.getOrigRect().set(r.left, top, r.left + r.width(), top + r.height());
+			// Clear any per-game offsets so portrait fullscreen panel system buttons
+			// always follow the panel defaults at TouchConsole.PORTRAIT_SYS_ROW_TOP
 			iv.setOffset(0, 0);
+			iv.setOffsetTMP(0, 0);
 			iv.commitChanges();
 		}
 	}
