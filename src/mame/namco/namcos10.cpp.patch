@@ -1,0 +1,126 @@
+diff --git a/namcos10.cpp b/namcos10.cpp
+--- a/namcos10.cpp
++++ b/namcos10.cpp
+@@ -702,6 +702,7 @@
+ 	{ }
+ 
+ 	INPUT_CHANGED_MEMBER(mgexio_coin_start);
++	INPUT_CHANGED_MEMBER(exio_analog_changed);
+ 
+ protected:
+ 	using unscramble_func = uint16_t (*)(uint16_t);
+@@ -759,6 +760,8 @@
+ 
+ 	template <int N> uint16_t exio_lightgun_io_r();
+ 
++	uint16_t exio_analog_r(offs_t offset);
++
+ 	TIMER_DEVICE_CALLBACK_MEMBER(io_update_interrupt_callback);
+ 	void cdrom_interrupt(int state);
+ 	void cdrom_dmarq(int state);
+@@ -784,6 +787,7 @@
+ 
+ 	// EXIO
+ 	optional_ioport_array<8> m_exio_analog;
++	attotime m_exio_analog_hit[8];
+ 	optional_ioport_array<4> m_exio_lightgun;
+ 
+ 	// MGEXIO
+@@ -1056,6 +1060,7 @@
+ 	save_item(NAME(m_exio_ident_byte));
+ 
+ 	save_item(NAME(m_mgexio_coin_start_time));
++	save_item(NAME(m_exio_analog_hit));
+ }
+ 
+ void namcos10_state::machine_reset()
+@@ -1077,6 +1082,7 @@
+ 
+ 	std::fill(std::begin(m_mgexio_outputs), std::end(m_mgexio_outputs), 0);
+ 	std::fill(std::begin(m_mgexio_coin_start_time), std::end(m_mgexio_coin_start_time), attotime::never);
++	std::fill(std::begin(m_exio_analog_hit), std::end(m_exio_analog_hit), attotime::never);
+ }
+ 
+ TIMER_DEVICE_CALLBACK_MEMBER(namcos10_state::io_update_interrupt_callback)
+@@ -1309,12 +1315,43 @@
+ 
+ ///////////////////////////////////////////////////////////////////////////////////////////////
+ 
++// The Taiko drums are piezo sensors, which give a spike when hit, but the inputs here are keys, which are a
++// level. A key held down kept its sensor at full scale for as long as it was held, and a second sensor hit
++// meanwhile tied with it, so the game took only one of the two (hold P1R Rim, hit P1L Rim -> the left hit
++// never registered). So the Taiko ports record the time of each press (exio_analog_changed) and the sensor
++// reads as a short pulse from that moment, held or not.
++// A sensor that never recorded a press (the analog sticks of other games) reads as the port, unchanged.
++uint16_t namcos10_state::exio_analog_r(offs_t offset)
++{
++	if (offset >= 8)
++		return 0;
++
++	if (m_exio_analog_hit[offset] == attotime::never)
++		return m_exio_analog[offset].read_safe(0);
++
++	constexpr double HOLD = 0.025;  // seconds at full scale
++	constexpr double DECAY = 0.025; // then a linear fall to 0
++	const double age = (machine().time() - m_exio_analog_hit[offset]).as_double();
++	if (age < HOLD)
++		return 0x3ff;
++	if (age < HOLD + DECAY)
++		return uint16_t(0x3ff * (1.0 - (age - HOLD) / DECAY));
++	return 0;
++}
++
++INPUT_CHANGED_MEMBER(namcos10_state::exio_analog_changed)
++{
++	// Only a key going down starts a hit.
++	if (newval && !oldval)
++		m_exio_analog_hit[param] = machine().time();
++}
++
+ void namcos10_state::namcos10_exio(machine_config &config)
+ {
+ 	namcos10_exio_device &exio(NAMCOS10_EXIO(config, m_exio));
+ 
+ 	exio.analog_callback().set([this] (offs_t offset) {
+-		return m_exio_analog[offset].read_safe(0);
++		return exio_analog_r(offset);
+ 	});
+ 
+ 	m_psx_remapper = [this] () {
+@@ -3377,28 +3414,28 @@
+ 
+ 	// Drums use PKS1-4A1 Piezoelectric ceramic sensors for input values
+ 	PORT_START("EXIO_ANALOG1") // P1R Fuchi
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_NAME("P1R Rim") PORT_PLAYER(1)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_NAME("P1R Rim") PORT_PLAYER(1) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 0)
+ 
+ 	PORT_START("EXIO_ANALOG2") // P1R Men
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_NAME("P1R Surface") PORT_PLAYER(1)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_NAME("P1R Surface") PORT_PLAYER(1) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 1)
+ 
+ 	PORT_START("EXIO_ANALOG3") // P1L Men
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_NAME("P1L Surface") PORT_PLAYER(1)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_NAME("P1L Surface") PORT_PLAYER(1) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 2)
+ 
+ 	PORT_START("EXIO_ANALOG4") // P1L Fuchi
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_NAME("P1L Rim") PORT_PLAYER(1)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_NAME("P1L Rim") PORT_PLAYER(1) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 3)
+ 
+ 	PORT_START("EXIO_ANALOG5") // P2R Fuchi
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_NAME("P2R Rim") PORT_PLAYER(2)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_NAME("P2R Rim") PORT_PLAYER(2) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 4)
+ 
+ 	PORT_START("EXIO_ANALOG6") // P2R Men
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_NAME("P2R Surface") PORT_PLAYER(2)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_NAME("P2R Surface") PORT_PLAYER(2) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 5)
+ 
+ 	PORT_START("EXIO_ANALOG7") // P2L Men
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_NAME("P2L Surface") PORT_PLAYER(2)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_NAME("P2L Surface") PORT_PLAYER(2) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 6)
+ 
+ 	PORT_START("EXIO_ANALOG8") // P2L Fuchi
+-	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_NAME("P2L Rim") PORT_PLAYER(2)
++	PORT_BIT( 0x3ff, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_NAME("P2L Rim") PORT_PLAYER(2) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(namcos10_state::exio_analog_changed), 7)
+ 
+ INPUT_PORTS_END
+ 

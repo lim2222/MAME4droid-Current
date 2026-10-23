@@ -198,6 +198,7 @@ SUBDIRS = [
     "src/frontend/mame",
     "src/frontend/mame/ui",
     "src/mame/capcom",
+    "src/mame/namco",
     "src/mame/igs",
     "src/mame/snk",
     "src/osd/modules/lib",
@@ -633,6 +634,13 @@ fi
 # ============================================================= 6. generate =====
 hdr "6/7  Generate (layouts, version, project files)"
 cd "$MAMESRC"
+
+# --- Native ARM64 DRC -------------------------------------------------------
+# Upstream's android-arm64 rule hard-codes --NOASM=1, which forces the C DRC
+# backend (drcbe_c) and drops drcbearm64.cpp.  Remove it (idempotent).
+# NOASM=0 is also passed on the make command lines below.
+sed -i '/--targetos=android --PLATFORM=arm64 --NOASM=1/ s/ --NOASM=1//' makefile
+
 if [ "$DO_CLEAN" = 1 ]; then
     warn "--clean: removing $MAMESRC/build"
     rm -rf "$MAMESRC/build"
@@ -642,12 +650,19 @@ CLV="$("$NDK_CLANG" -dumpversion 2>/dev/null)"
 [ -n "$CLV" ] || die "could not query clang version from $NDK_CLANG"
 echo "  NDK clang version: $CLV"
 echo "  - layouts / version / translations ..."
-make OSD=myosd SUBTARGET=mame CONFIG=release generate -j"$JOBS"
+make OSD=myosd SUBTARGET=mame CONFIG=release NOASM=0 generate -j"$JOBS"
 echo "  - genie project files ..."
-make OSD=myosd SUBTARGET=mame CONFIG=release CLANG_VERSION="$CLV" \
+make OSD=myosd SUBTARGET=mame CONFIG=release NOASM=0 CLANG_VERSION="$CLV" \
      "build/projects/myosd/mame/gmake-android-arm64/Makefile"
 [ -f "$PROJDIR/Makefile" ] || die "project Makefile was not generated: $PROJDIR/Makefile"
 ok "generated: $PROJDIR/Makefile"
+
+if grep -q "MAME_NOASM" "$PROJDIR/emu.make"; then
+    die "MAME_NOASM is still defined: C-only DRC backend. Check the android-arm64 rule in makefile."
+fi
+grep -lq "drcbearm64" "$PROJDIR"/*.make \
+    || die "drcbearm64.cpp is not in the project: the native ARM64 DRC would be missing."
+ok "native ARM64 DRC enabled"
 
 # ============================================================== 7. compile =====
 hdr "7/7  Compile libMAME4droid.so (log: $LOG)"
