@@ -1015,10 +1015,37 @@ public class TouchController implements IController {
 		setButtonsSizes(values);
 		if (mm.getInputHandler().getControlCustomizer() != null) {
 			mm.getInputHandler().getControlCustomizer().readDefinedControlLayout();
+			enforcePortraitFullscreenSystemRow();
 			// The panel's system button copies start from the stored state of
 			// the normal layout's buttons, so existing customizations carry
 			// over untouched until a panel owns its copies.
 			mm.getInputHandler().getControlCustomizer().seedPanelSystemButtons();
+		}
+	}
+
+	private void enforcePortraitFullscreenSystemRow() {
+		if (mm.getMainHelper().getscrOrientation() != Configuration.ORIENTATION_PORTRAIT) return;
+		if (!Emulator.isPortraitFull()) return;
+
+		int rectType;
+		if (mm.getPrefsHelper().isMahjong()) rectType = TYPE_MAHJONG_SYS_RECT;
+		else if (mm.getPrefsHelper().isHanafuda()) rectType = TYPE_HANAFUDA_SYS_RECT;
+		else if (mm.getPrefsHelper().isTatacon()) rectType = TYPE_TATACON_SYS_RECT;
+		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TYPE_KEYBOARD_SYS_RECT;
+		else if (mm.getPrefsHelper().isConsolePanel()) rectType = TYPE_CONSOLE_SYS_RECT;
+		else return;
+
+		int imgType = rectType + 1;
+		int top = TouchConsole.PORTRAIT_SYS_ROW_TOP;
+
+		for (InputValue iv : values) {
+			if (iv.getType() != rectType && iv.getType() != imgType) continue;
+			Rect r = iv.getOrigRect();
+			if (r == null) continue;
+			iv.setRect(r.left, top, r.width(), r.height());
+			iv.getOrigRect().set(r.left, top, r.left + r.width(), top + r.height());
+			iv.setOffset(0, 0);
+			iv.commitChanges();
 		}
 	}
 
