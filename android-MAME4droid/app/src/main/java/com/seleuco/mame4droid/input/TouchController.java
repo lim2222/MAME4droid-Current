@@ -1015,14 +1015,23 @@ public class TouchController implements IController {
 		setButtonsSizes(values);
 		if (mm.getInputHandler().getControlCustomizer() != null) {
 			mm.getInputHandler().getControlCustomizer().readDefinedControlLayout();
-			enforcePortraitFullscreenSystemRow();
 			// The panel's system button copies start from the stored state of
 			// the normal layout's buttons, so existing customizations carry
 			// over untouched until a panel owns its copies.
 			mm.getInputHandler().getControlCustomizer().seedPanelSystemButtons();
+			// Must run after the seeding: otherwise the copies inherit the
+			// stored offsets of the normal layout's system buttons again.
+			enforcePortraitFullscreenSystemRow();
 		}
 	}
 
+	/**
+	 * In full screen portrait the exit / option / coin / start buttons always
+	 * follow the layout defaults (see TouchConsole.PORTRAIT_SYS_ROW_TOP), both
+	 * the normal layout's buttons and the active panel's copies: a per game
+	 * layout saved by another game - or by an older build - must never drag
+	 * them around when a new game is started.
+	 */
 	private void enforcePortraitFullscreenSystemRow() {
 		if (mm.getMainHelper().getscrOrientation() != Configuration.ORIENTATION_PORTRAIT) return;
 		if (!Emulator.isPortraitFull()) return;
@@ -1033,14 +1042,20 @@ public class TouchController implements IController {
 		else if (mm.getPrefsHelper().isTatacon()) rectType = TYPE_TATACON_SYS_RECT;
 		else if (mm.getPrefsHelper().isKeyboardPanel()) rectType = TYPE_KEYBOARD_SYS_RECT;
 		else if (mm.getPrefsHelper().isConsolePanel()) rectType = TYPE_CONSOLE_SYS_RECT;
-		else return;
+		else rectType = -1;
 
 		int imgType = rectType + 1;
 
 		for (InputValue iv : values) {
-			if (iv.getType() != rectType && iv.getType() != imgType) continue;
-			// Clear any per-game offsets so portrait fullscreen panel system buttons
-			// always follow the panel defaults at TouchConsole.PORTRAIT_SYS_ROW_TOP
+			int type = iv.getType();
+			int value = iv.getValue();
+
+			boolean normalSystemKey = (type == TYPE_BUTTON_RECT || type == TYPE_BUTTON_IMG)
+				&& value >= BTN_EXIT && value <= BTN_START;
+			boolean panelSystemKey = rectType != -1 && (type == rectType || type == imgType);
+
+			if (!normalSystemKey && !panelSystemKey) continue;
+
 			iv.setOffset(0, 0);
 			iv.setOffsetTMP(0, 0);
 			iv.commitChanges();
